@@ -188,6 +188,7 @@ function options(sel, list, first) {
 }
 
 // ---------- Init ----------
+function mula() {
 call('getInit').then(d => {
   S.init = d;
   $('hSekolah').textContent = d.config.sekolah;
@@ -204,6 +205,7 @@ call('getInit').then(d => {
   $('app').hidden = false;
   jam(); setInterval(jam, 1000);
 }).catch(e => { $('loading').textContent = e.message; });
+}
 
 // ---------- Tab ----------
 document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
@@ -432,6 +434,14 @@ function downloadCsv() {
   a.href = url; a.download = `laporan-lewat_${r.dari}_${r.hingga}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+// Dalam Apps Script terus mula. Di luar (contoh GitHub Pages) guna mod demo.
+if (window.google && google.script) mula();
+else {
+  const sc = document.createElement('script');
+  sc.src = 'demo.js';
+  sc.onerror = () => { $('loading').textContent = 'Gagal muat demo.js'; };
+  document.body.appendChild(sc);
 }
 </script>
 </body>

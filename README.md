@@ -7,7 +7,12 @@ Sistem rekod kelewatan murid. Guna Google Sheets + Apps Script, login dengan aka
 | Fail | Guna |
 |---|---|
 | `Code.gs` | Backend (Apps Script) |
-| `Index.html` | Paparan web app (phone/tablet) |
+| `index.html` | Paparan web app (phone/tablet) |
+| `demo.js` | Mod demo untuk GitHub Pages sahaja. **Jangan** masukkan ke Apps Script |
+
+## Cuba demo dulu
+
+Buka https://aznizam-hash.github.io/project1/ untuk cuba UI dengan data rekaan. Data demo hanya disimpan dalam browser masing-masing dan tidak masuk ke Google Sheets. Guna dropdown "Login sebagai" untuk tukar antara Admin dan Pengawas.
 
 ## Langkah setup (sekali sahaja, ~20 minit)
 
@@ -16,7 +21,7 @@ Buat semua langkah ni dengan **akaun DELIMa guru admin**.
 1. **Buat Google Sheet baru** dalam Google Drive DELIMa. Namakan `Smart Late Record`.
 2. Dalam Sheet tu, buka **Extensions > Apps Script**.
 3. Padam kod dalam `Code.gs`, kemudian paste isi fail `Code.gs`.
-4. Klik **+ > HTML**, namakan `Index` (tanpa .html), kemudian paste isi `Index.html`.
+4. Klik **+ > HTML**, namakan `Index` (huruf besar I, tanpa .html), kemudian paste isi `index.html`.
 5. Dalam `Code.gs`, edit bahagian `CONFIG`: `NAMA_SEKOLAH`, `KOD_SEKOLAH`, dan `LOGO_URL` kalau ada. Lepas tu tekan Save.
 6. Kembali ke Sheet dan refresh. Menu **Smart Late Record** akan muncul.
 7. Klik **Smart Late Record > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
