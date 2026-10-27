@@ -51,6 +51,15 @@ Buat semua langkah ni dengan **akaun DELIMa guru admin**.
 
 > Pengawas **tidak perlu** akses kepada Google Sheet. Mereka hanya guna URL web app. Jangan share Sheet kepada murid.
 
+## Urus murid (murid baru, pindah, tukar kelas)
+
+Admin boleh buat semua ni dalam web app, melalui tab **Murid**:
+- **Murid baru:** isi No. Daftar, Kelas dan Nama, kemudian tekan Tambah Murid.
+- **Pindah atau berhenti:** Edit, kemudian tukar Status jadi Tidak aktif. Rekod lama murid tu kekal dalam laporan.
+- **Tukar kelas:** Edit, kemudian tukar Kelas.
+
+Import APDM sesuai untuk awal tahun sahaja, sebab import akan ganti seluruh senarai murid.
+
 ## Kemas kini kod
 
 Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: New version > Deploy**. URL tak berubah.

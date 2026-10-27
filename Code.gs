@@ -298,6 +298,55 @@ function getLaporan(p) {
   };
 }
 
+// ---------- Urus murid (admin) ----------
+
+function getSenaraiMurid() {
+  requireUser_(['ADMIN']);
+  return readRows_(TAB.MURID).filter(function (m) { return String(m.NoDaftar).trim(); })
+    .map(function (m) {
+      const o = pubMurid_(m);
+      o.aktif = isAktif_(m);
+      return o;
+    })
+    .sort(function (a, b) { return a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama); });
+}
+
+// baru = true untuk tambah murid; false untuk edit murid sedia ada (ikut noDaftar)
+function simpanMurid(m, baru) {
+  requireUser_(['ADMIN']);
+  m = m || {};
+  const noDaftar = String(m.noDaftar || '').trim();
+  const nama = String(m.nama || '').replace(/\s+/g, ' ').trim().toUpperCase();
+  let kelas = String(m.kelas || '').replace(/\s+/g, ' ').trim();
+  if (!/^[A-Za-z0-9\-\/]{1,30}$/.test(noDaftar)) throw new Error('No. Daftar tidak sah (huruf/nombor sahaja, maks 30).');
+  if (!nama) throw new Error('Nama wajib diisi.');
+  if (!kelas) throw new Error('Kelas wajib diisi.');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const semua = readRows_(TAB.MURID);
+    // Guna ejaan kelas sedia ada kalau sama (abaikan huruf besar/kecil)
+    const sedia = semua.map(function (r) { return String(r.Kelas); })
+      .find(function (k) { return k.toLowerCase() === kelas.toLowerCase(); });
+    if (sedia) kelas = sedia;
+
+    const ada = semua.find(function (r) { return String(r.NoDaftar).trim() === noDaftar; });
+    const sh = sheet_(TAB.MURID);
+    const row = [clean_(noDaftar, 30), clean_(nama, 150), clean_(kelas, 50), m.aktif === false ? 'TIDAK' : 'YA'];
+    if (baru) {
+      if (ada) throw new Error('No. Daftar ' + noDaftar + ' sudah wujud (' + ada.Nama + ').');
+      sh.getRange(sh.getLastRow() + 1, 1, 1, 4).setValues([row]);
+    } else {
+      if (!ada) throw new Error('Murid tidak dijumpai.');
+      sh.getRange(ada._row, 1, 1, 4).setValues([row]);
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  return { kelas: getInit().kelas };
+}
+
 // ---------- Helper (private) ----------
 
 function requireUser_(roles) {

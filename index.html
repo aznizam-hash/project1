@@ -79,6 +79,7 @@
     <button data-tab="rekod" class="on">Rekod</button>
     <button data-tab="hariini">Hari Ini</button>
     <button data-tab="laporan" id="navLaporan" hidden>Laporan</button>
+    <button data-tab="murid" id="navMurid" hidden>Murid</button>
   </nav>
 
   <main>
@@ -150,8 +151,47 @@
       </div>
       <div id="hasilLaporan"></div>
     </section>
+
+    <!-- MURID (admin) -->
+    <section id="tab-murid" hidden>
+      <div class="card">
+        <h2>Tambah murid baru</h2>
+        <div class="row">
+          <div><label for="mNo">No. Daftar</label><input id="mNo" maxlength="30" autocomplete="off"></div>
+          <div><label for="mKelas">Kelas</label><input id="mKelas" list="dlKelas" maxlength="50" placeholder="Pilih atau taip"></div>
+        </div>
+        <label for="mNama">Nama penuh</label>
+        <input id="mNama" maxlength="150" autocomplete="off">
+        <button id="btnTambahMurid" class="btn full" style="margin-top:12px">Tambah Murid</button>
+        <div id="msgMurid"></div>
+      </div>
+      <div class="card">
+        <h2>Senarai murid (<span id="bilMurid">0</span>)</h2>
+        <div class="row">
+          <div><select id="mfKelas"><option value="">Semua kelas</option></select></div>
+          <div><input id="mfCari" type="search" placeholder="Cari nama / no. daftar"></div>
+        </div>
+        <div class="scroll"><table class="tbl" id="tblMurid"></table></div>
+      </div>
+      <datalist id="dlKelas"></datalist>
+    </section>
   </main>
 </div>
+
+<dialog id="dlgMurid">
+  <h2 style="margin-top:0;font-size:16px">Edit murid</h2>
+  <p class="muted">No. Daftar: <b id="emNo"></b></p>
+  <label for="emNama">Nama</label>
+  <input id="emNama" maxlength="150">
+  <label for="emKelas">Kelas</label>
+  <input id="emKelas" list="dlKelas" maxlength="50">
+  <label for="emAktif">Status</label>
+  <select id="emAktif"><option value="YA">Aktif</option><option value="TIDAK">Tidak aktif (pindah / berhenti)</option></select>
+  <div class="row" style="margin-top:12px">
+    <button class="btn sec" id="emBatal">Batal</button>
+    <button class="btn" id="emSimpan">Simpan</button>
+  </div>
+</dialog>
 
 <dialog id="dlgEdit">
   <h2 style="margin-top:0;font-size:16px">Edit rekod</h2>
@@ -193,13 +233,12 @@ call('getInit').then(d => {
   S.init = d;
   $('hSekolah').textContent = d.config.sekolah;
   $('hUser').textContent = `${d.user.nama} · ${d.user.peranan}`;
-  options($('kelas'), d.kelas, '-- Pilih kelas --');
   options($('sebab'), d.sebab, '-- Pilih sebab --');
   options($('edSebab'), d.sebab);
-  options($('fKelas'), d.kelas, 'Semua');
   options($('fSebab'), d.sebab, 'Semua');
   $('fHad').value = d.config.hadKerap;
-  if (d.user.peranan === 'ADMIN') $('navLaporan').hidden = false;
+  if (d.user.peranan === 'ADMIN') { $('navLaporan').hidden = false; $('navMurid').hidden = false; }
+  setKelas(d.kelas);
   setTempoh('bulan');
   $('loading').remove();
   $('app').hidden = false;
@@ -212,6 +251,7 @@ document.querySelectorAll('nav button').forEach(b => b.addEventListener('click',
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + b.dataset.tab);
   if (b.dataset.tab === 'hariini') muatHariIni();
+  if (b.dataset.tab === 'murid') muatMurid();
 }));
 
 // ---------- Jam (paparan sahaja; masa sebenar diambil di server) ----------
@@ -354,6 +394,69 @@ $('edSimpan').addEventListener('click', async () => {
   try {
     await call('kemaskiniRekod', S.editId, $('edSebab').value, $('edCatatan').value.trim());
     $('dlgEdit').close(); muatHariIni();
+  } catch (e) { alert(e.message); }
+});
+
+// ---------- Urus murid ----------
+function setKelas(list) {
+  const pilih = $('kelas').value;
+  options($('kelas'), list, '-- Pilih kelas --'); $('kelas').value = pilih;
+  options($('fKelas'), list, 'Semua');
+  const mf = $('mfKelas').value;
+  options($('mfKelas'), list, 'Semua kelas'); $('mfKelas').value = mf;
+  $('dlKelas').innerHTML = list.map(k => `<option value="${esc(k)}">`).join('');
+}
+
+async function muatMurid() {
+  $('tblMurid').innerHTML = '<tr><td class="muted">Memuatkan...</td></tr>';
+  try { S.murid = await call('getSenaraiMurid'); renderMurid(); }
+  catch (e) { $('tblMurid').innerHTML = `<tr><td class="msg bad">${esc(e.message)}</td></tr>`; }
+}
+function renderMurid() {
+  const k = $('mfKelas').value, q = $('mfCari').value.trim().toLowerCase();
+  const list = (S.murid || []).filter(m => (!k || m.kelas === k) &&
+    (!q || m.nama.toLowerCase().includes(q) || m.noDaftar.toLowerCase().includes(q)));
+  $('bilMurid').textContent = list.length;
+  $('tblMurid').innerHTML = list.length ? '<tr><th>No. Daftar</th><th>Nama</th><th>Kelas</th><th></th></tr>' +
+    list.slice(0, 300).map(m => `<tr${m.aktif ? '' : ' style="opacity:.55"'}><td>${esc(m.noDaftar)}</td>
+      <td>${esc(m.nama)}${m.aktif ? '' : ' <span class="tag">Tidak aktif</span>'}</td><td>${esc(m.kelas)}</td>
+      <td><button class="btn sec sm" data-murid="${esc(m.noDaftar)}">Edit</button></td></tr>`).join('') +
+    (list.length > 300 ? '<tr><td colspan="4" class="muted">Tunjuk 300 pertama. Guna tapisan untuk kecilkan senarai.</td></tr>' : '')
+    : '<tr><td class="muted">Tiada murid.</td></tr>';
+}
+$('mfKelas').addEventListener('change', renderMurid);
+$('mfCari').addEventListener('input', renderMurid);
+
+$('btnTambahMurid').addEventListener('click', async () => {
+  const el = $('msgMurid'), btn = $('btnTambahMurid');
+  const m = { noDaftar: $('mNo').value.trim(), nama: $('mNama').value.trim(), kelas: $('mKelas').value.trim() };
+  if (!m.noDaftar || !m.nama || !m.kelas) return msg(el, 'bad', 'Isi No. Daftar, Nama dan Kelas.');
+  btn.disabled = true; msg(el, '', '');
+  try {
+    const r = await call('simpanMurid', m, true);
+    setKelas(r.kelas);
+    msg(el, 'ok', `${esc(m.nama.toUpperCase())} ditambah ke ${esc(m.kelas)}.`);
+    $('mNo').value = ''; $('mNama').value = '';
+    muatMurid();
+  } catch (e) { msg(el, 'bad', esc(e.message)); }
+  finally { btn.disabled = false; }
+});
+
+$('tblMurid').addEventListener('click', e => {
+  const no = e.target.dataset.murid;
+  if (!no) return;
+  const m = S.murid.find(x => x.noDaftar === no);
+  $('emNo').textContent = m.noDaftar; $('emNama').value = m.nama; $('emKelas').value = m.kelas;
+  $('emAktif').value = m.aktif ? 'YA' : 'TIDAK';
+  $('dlgMurid').showModal();
+});
+$('emBatal').addEventListener('click', () => $('dlgMurid').close());
+$('emSimpan').addEventListener('click', async () => {
+  try {
+    const r = await call('simpanMurid', { noDaftar: $('emNo').textContent, nama: $('emNama').value,
+      kelas: $('emKelas').value, aktif: $('emAktif').value === 'YA' }, false);
+    setKelas(r.kelas); $('dlgMurid').close(); muatMurid();
+    if ($('kelas').value) muatKelas();
   } catch (e) { alert(e.message); }
 });
 
