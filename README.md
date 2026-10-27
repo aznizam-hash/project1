@@ -57,6 +57,10 @@ Admin boleh buat semua ni dalam web app, melalui tab **Murid**:
 - **Murid baru:** isi No. Daftar, Kelas dan Nama, kemudian tekan Tambah Murid.
 - **Pindah atau berhenti:** Edit, kemudian tukar Status jadi Tidak aktif. Rekod lama murid tu kekal dalam laporan.
 - **Tukar kelas:** Edit, kemudian tukar Kelas.
+- **Tambah pukal (CSV):** muat turun Template CSV, isi dalam Excel, kemudian Save As **CSV UTF-8**. Pilih fail tu dan tekan Import.
+  - Kolum yang perlu ada: `NoDaftar, Nama, Kelas`. Fail export APDM pun boleh, dan kolum lain akan diabaikan.
+  - No. Daftar yang sudah wujud akan dilangkau. Tick "Kemas kini" kalau nak kemas kini nama atau kelas murid tersebut.
+  - Baris yang ada ralat akan disenaraikan ikut nombor baris. Baris lain tetap diimport.
 
 Import APDM sesuai untuk awal tahun sahaja, sebab import akan ganti seluruh senarai murid.
 

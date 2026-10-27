@@ -166,6 +166,19 @@
         <div id="msgMurid"></div>
       </div>
       <div class="card">
+        <h2>Tambah pukal (CSV)</h2>
+        <p class="muted" style="margin-top:0">Fail CSV dengan kolum <b>NoDaftar, Nama, Kelas</b>. Fail export APDM pun boleh.
+          Dari Excel: File &gt; Save As &gt; <b>CSV UTF-8</b>.</p>
+        <div class="row">
+          <input id="csvFail" type="file" accept=".csv,text/csv">
+          <button id="btnTemplate" class="btn sec sm" style="flex:0 0 auto">Template CSV</button>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;color:var(--ink)">
+          <input id="csvKemaskini" type="checkbox" style="width:18px;height:18px"> Kemas kini nama/kelas murid yang No. Daftar sudah wujud
+        </label>
+        <div id="csvPreview"></div>
+      </div>
+      <div class="card">
         <h2>Senarai murid (<span id="bilMurid">0</span>)</h2>
         <div class="row">
           <div><select id="mfKelas"><option value="">Semua kelas</option></select></div>
@@ -459,6 +472,71 @@ $('emSimpan').addEventListener('click', async () => {
     if ($('kelas').value) muatKelas();
   } catch (e) { alert(e.message); }
 });
+
+// ---------- Import pukal CSV ----------
+function parseCsv(text) {
+  text = text.replace(/^﻿/, '');
+  const first = text.split(/\r?\n/)[0] || '';
+  const cnt = c => first.split(c).length;
+  const d = cnt('\t') > cnt(',') && cnt('\t') > cnt(';') ? '\t' : cnt(';') > cnt(',') ? ';' : ',';
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"' && text[i + 1] === '"') { f += '"'; i++; }
+      else if (c === '"') q = false;
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === d) { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(f); rows.push(row); row = []; f = '';
+    } else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim()));
+}
+
+$('btnTemplate').addEventListener('click', () => {
+  const t = '﻿NoDaftar,Nama,Kelas\r\n12345,CONTOH NAMA MURID,1 Amanah\r\n';
+  const url = URL.createObjectURL(new Blob([t], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = 'template-murid.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+$('csvFail').addEventListener('change', () => {
+  const f = $('csvFail').files[0], box = $('csvPreview');
+  S.csv = null; box.innerHTML = '';
+  if (!f) return;
+  if (f.size > 2 * 1024 * 1024) return msg(box, 'bad', 'Fail terlalu besar (maks 2 MB).');
+  const rd = new FileReader();
+  rd.onload = () => {
+    const rows = parseCsv(String(rd.result));
+    if (rows.length < 2) return msg(box, 'bad', 'Tiada data dijumpai dalam fail.');
+    S.csv = rows;
+    box.innerHTML = `<p class="muted">${rows.length - 1} baris dijumpai. Contoh 5 baris pertama:</p>` +
+      jadual(rows[0], rows.slice(1, 6)) +
+      `<button id="btnImport" class="btn full" style="margin-top:10px">Import ${rows.length - 1} murid</button><div id="msgImport"></div>`;
+    $('btnImport').addEventListener('click', importCsv);
+  };
+  rd.readAsText(f, 'utf-8');
+});
+
+async function importCsv() {
+  const btn = $('btnImport'), el = $('msgImport');
+  btn.disabled = true; msg(el, '', '<span class="muted">Mengimport...</span>');
+  try {
+    const r = await call('importMuridCsv', S.csv, $('csvKemaskini').checked);
+    setKelas(r.kelas);
+    const ralat = r.ralat.length ? `<ul>${r.ralat.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` +
+      (r.ralat.length > 30 ? `<p>...dan ${r.ralat.length - 30} lagi.</p>` : '') : '';
+    msg(el, r.ralat.length ? 'bad' : 'ok', `Ditambah: <b>${r.tambah}</b> · Dikemas kini: <b>${r.kemaskini}</b> · ` +
+      `Dilangkau (sudah wujud): <b>${r.langkau}</b> · Ralat: <b>${r.ralat.length}</b>${ralat}`);
+    $('csvFail').value = '';
+    muatMurid();
+  } catch (e) { msg(el, 'bad', esc(e.message)); btn.disabled = false; }
+}
 
 // ---------- Laporan ----------
 function setTempoh(q) {

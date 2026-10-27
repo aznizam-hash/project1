@@ -18,7 +18,7 @@ const CONFIG = {
   // Nama header dalam fail APDM yang diterima (huruf besar/kecil tak penting).
   // Tambah nama lain kalau header fail APDM sekolah berbeza.
   APDM_HEADER: {
-    noDaftar: ['NO. DAFTAR', 'NO DAFTAR', 'NO. PENDAFTARAN', 'NO PENDAFTARAN', 'ID MURID', 'NO. MURID'],
+    noDaftar: ['NODAFTAR', 'NO. DAFTAR', 'NO DAFTAR', 'NO. PENDAFTARAN', 'NO PENDAFTARAN', 'ID MURID', 'NO. MURID'],
     nama: ['NAMA', 'NAMA MURID'],
     kelas: ['KELAS', 'NAMA KELAS']
   }
@@ -85,19 +85,8 @@ function importApdm() {
     return;
   }
 
-  const head = values[0].map(function (h) { return String(h).trim().toUpperCase(); });
-  const col = {};
-  Object.keys(CONFIG.APDM_HEADER).forEach(function (k) {
-    const calon = CONFIG.APDM_HEADER[k].map(function (h) { return h.toUpperCase(); });
-    col[k] = head.findIndex(function (h) { return calon.indexOf(h) > -1; });
-  });
-  const hilang = Object.keys(col).filter(function (k) { return col[k] === -1; });
-  if (hilang.length) {
-    ui.alert('Header tidak dijumpai untuk: ' + hilang.join(', ') +
-      '\n\nHeader dalam fail: ' + head.join(' | ') +
-      '\n\nTambah nama header yang betul dalam CONFIG.APDM_HEADER.');
-    return;
-  }
+  let col;
+  try { col = padanKolum_(values[0]); } catch (e) { ui.alert(e.message); return; }
 
   const seen = {};
   const rows = [];
@@ -314,28 +303,15 @@ function getSenaraiMurid() {
 // baru = true untuk tambah murid; false untuk edit murid sedia ada (ikut noDaftar)
 function simpanMurid(m, baru) {
   requireUser_(['ADMIN']);
-  m = m || {};
-  const noDaftar = String(m.noDaftar || '').trim();
-  const nama = String(m.nama || '').replace(/\s+/g, ' ').trim().toUpperCase();
-  let kelas = String(m.kelas || '').replace(/\s+/g, ' ').trim();
-  if (!/^[A-Za-z0-9\-\/]{1,30}$/.test(noDaftar)) throw new Error('No. Daftar tidak sah (huruf/nombor sahaja, maks 30).');
-  if (!nama) throw new Error('Nama wajib diisi.');
-  if (!kelas) throw new Error('Kelas wajib diisi.');
-
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const semua = readRows_(TAB.MURID);
-    // Guna ejaan kelas sedia ada kalau sama (abaikan huruf besar/kecil)
-    const sedia = semua.map(function (r) { return String(r.Kelas); })
-      .find(function (k) { return k.toLowerCase() === kelas.toLowerCase(); });
-    if (sedia) kelas = sedia;
-
-    const ada = semua.find(function (r) { return String(r.NoDaftar).trim() === noDaftar; });
+    const row = normMurid_(m || {}, semua.map(function (r) { return String(r.Kelas); }));
+    const ada = semua.find(function (r) { return String(r.NoDaftar).trim() === row[0]; });
     const sh = sheet_(TAB.MURID);
-    const row = [clean_(noDaftar, 30), clean_(nama, 150), clean_(kelas, 50), m.aktif === false ? 'TIDAK' : 'YA'];
     if (baru) {
-      if (ada) throw new Error('No. Daftar ' + noDaftar + ' sudah wujud (' + ada.Nama + ').');
+      if (ada) throw new Error('No. Daftar ' + row[0] + ' sudah wujud (' + ada.Nama + ').');
       sh.getRange(sh.getLastRow() + 1, 1, 1, 4).setValues([row]);
     } else {
       if (!ada) throw new Error('Murid tidak dijumpai.');
@@ -345,6 +321,67 @@ function simpanMurid(m, baru) {
     lock.releaseLock();
   }
   return { kelas: getInit().kelas };
+}
+
+// data = array baris CSV (baris pertama header). kemaskini = true untuk
+// kemas kini nama/kelas murid yang No. Daftar sudah wujud; false = langkau.
+function importMuridCsv(data, kemaskini) {
+  requireUser_(['ADMIN']);
+  if (!Array.isArray(data) || data.length < 2) throw new Error('Fail kosong atau tiada baris data.');
+  if (data.length > 3001) throw new Error('Maksimum 3000 murid sekali import.');
+  const col = padanKolum_(data[0]);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const sh = sheet_(TAB.MURID);
+    const values = sh.getDataRange().getValues();
+    const head = values.shift();
+    const indeks = {};
+    values.forEach(function (r, i) { indeks[String(r[0]).trim()] = i; });
+    const kelasSedia = values.map(function (r) { return String(r[2]); });
+
+    const hasil = { tambah: 0, kemaskini: 0, langkau: 0, ralat: [] };
+    const dalamFail = {};
+    data.slice(1).forEach(function (r, i) {
+      if (!Array.isArray(r) || r.every(function (v) { return !String(v || '').trim(); })) return;
+      const baris = i + 2;
+      let row;
+      try {
+        row = normMurid_({ noDaftar: r[col.noDaftar], nama: r[col.nama], kelas: r[col.kelas] }, kelasSedia);
+      } catch (e) {
+        hasil.ralat.push('Baris ' + baris + ': ' + e.message);
+        return;
+      }
+      if (dalamFail[row[0]]) {
+        hasil.ralat.push('Baris ' + baris + ': No. Daftar ' + row[0] + ' berganda dalam fail (sama dengan baris ' + dalamFail[row[0]] + ').');
+        return;
+      }
+      dalamFail[row[0]] = baris;
+      if (row[2] && kelasSedia.indexOf(row[2]) === -1) kelasSedia.push(row[2]);
+
+      if (indeks[row[0]] === undefined) {
+        indeks[row[0]] = values.length;
+        values.push(row);
+        hasil.tambah++;
+      } else if (kemaskini) {
+        values[indeks[row[0]]] = row;
+        hasil.kemaskini++;
+      } else {
+        hasil.langkau++;
+      }
+    });
+
+    if (hasil.tambah || hasil.kemaskini) {
+      sh.getRange(2, 1, values.length, head.length).setValues(values.map(function (r) {
+        return head.map(function (_, j) { return r[j] === undefined ? '' : r[j]; });
+      }));
+    }
+    hasil.kelas = getInit().kelas;
+    return hasil;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ---------- Helper (private) ----------
@@ -408,6 +445,37 @@ function semakSebab_(sebab, catatan) {
   const c = clean_(catatan, 200);
   if (sebab === SEBAB_LAIN && !c) throw new Error('Sila isi catatan untuk sebab Lain-lain.');
   return c;
+}
+
+// Pulangkan [noDaftar, nama, kelas, aktif] yang sudah disemak, atau throw Error
+function normMurid_(m, kelasSedia) {
+  const noDaftar = String(m.noDaftar == null ? '' : m.noDaftar).trim();
+  const nama = String(m.nama == null ? '' : m.nama).replace(/\s+/g, ' ').trim().toUpperCase();
+  let kelas = String(m.kelas == null ? '' : m.kelas).replace(/\s+/g, ' ').trim();
+  if (!/^[A-Za-z0-9\-\/]{1,30}$/.test(noDaftar)) throw new Error('No. Daftar tidak sah "' + noDaftar + '" (huruf/nombor sahaja, maks 30).');
+  if (!nama) throw new Error('Nama wajib diisi.');
+  if (!kelas) throw new Error('Kelas wajib diisi.');
+  // Guna ejaan kelas sedia ada kalau sama (abaikan huruf besar/kecil)
+  const sedia = (kelasSedia || []).find(function (k) { return k.toLowerCase() === kelas.toLowerCase(); });
+  if (sedia) kelas = sedia;
+  return [clean_(noDaftar, 30), clean_(nama, 150), clean_(kelas, 50), m.aktif === false ? 'TIDAK' : 'YA'];
+}
+
+// Cari indeks kolum noDaftar/nama/kelas dalam baris header (ikut CONFIG.APDM_HEADER)
+function padanKolum_(headerRow) {
+  const head = (headerRow || []).map(function (h) { return String(h).replace(/^\uFEFF/, '').trim().toUpperCase(); });
+  const col = {};
+  Object.keys(CONFIG.APDM_HEADER).forEach(function (k) {
+    const calon = CONFIG.APDM_HEADER[k].map(function (h) { return h.toUpperCase(); });
+    col[k] = head.findIndex(function (h) { return calon.indexOf(h) > -1; });
+  });
+  const hilang = Object.keys(col).filter(function (k) { return col[k] === -1; });
+  if (hilang.length) {
+    throw new Error('Header tidak dijumpai untuk: ' + hilang.join(', ') +
+      '. Header dalam fail: ' + head.join(' | ') +
+      '. Guna header NoDaftar, Nama, Kelas (atau tambah nama header dalam CONFIG.APDM_HEADER).');
+  }
+  return col;
 }
 
 function isAktif_(m) {
