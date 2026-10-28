@@ -139,6 +139,12 @@
   .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
   .chip { border:1px solid var(--line); background:#fff; border-radius:10px; padding:8px 14px; font-size:14px; }
   .chip.on { background:var(--pri); border-color:var(--pri); color:#fff; }
+  .chip button { border:0; background:none; color:var(--muted); font-weight:700; padding:0 0 0 6px; }
+  .seg { display:flex; background:#e2e8f0; border-radius:12px; padding:4px; margin-bottom:14px; }
+  .seg button { flex:1; border:0; background:none; padding:9px; border-radius:9px; font-weight:600; color:var(--muted); }
+  .seg button.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(15,23,42,.08); }
+  .card h3 + p.muted { margin-top:2px; }
+  .card h3.lagi { margin-top:22px; }
 
   .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); z-index:40; background:var(--ink); color:#fff;
            border-radius:12px; padding:12px 16px; font-size:14px; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 6px 20px rgba(0,0,0,.2); }
@@ -207,7 +213,7 @@
     <button data-tab="laporan" id="navLaporan" hidden>
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16v-4M12 16V8M15 16v-6"/></svg>Laporan</button>
     <button data-tab="pengguna" id="navPengguna" hidden>
-      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.9-3 3-4.6 5.5-4.6s4.6 1.6 5.5 4.6"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.6c1.5.6 2.5 2 3 4.4"/></svg>Pengguna</button>
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Tetapan</button>
   </nav>
 
   <main>
@@ -271,9 +277,14 @@
       <datalist id="dlKelas"></datalist>
     </section>
 
-    <!-- PENGGUNA (admin) -->
+    <!-- TETAPAN: PENGGUNA DAN SISTEM (admin) -->
     <section id="tab-pengguna" hidden>
-      <h2 class="page">Urus pengguna</h2>
+      <h2 class="page">Tetapan</h2>
+      <div class="seg" id="segTetapan">
+        <button data-seg="pengguna" class="on">Pengguna</button>
+        <button data-seg="sistem">Sistem</button>
+      </div>
+      <div id="seg-pengguna">
       <form class="card" id="formPengguna" autocomplete="off">
         <h3>Tambah pengguna</h3>
         <p class="muted">ID dijana ikut peranan (PGW, GRU, ADM). PIN sementara dipaparkan sekali sahaja dan wajib ditukar semasa login pertama.</p>
@@ -290,6 +301,31 @@
         <option value="GURU">Guru disiplin</option><option value="ADMIN">Admin</option></select>
       <div class="list" id="senaraiPengguna"></div>
       <p class="muted">Ketik pengguna untuk reset PIN atau tukar status. Pengguna tidak aktif terus dilog keluar.</p>
+      </div>
+
+      <form class="card" id="seg-sistem" hidden autocomplete="off">
+        <h3>Waktu bertugas pengawas</h3>
+        <p class="muted">Pengawas hanya boleh login dalam tempoh ini. Sesi pengawas tamat pada waktu tamat.</p>
+        <div class="row">
+          <div><label class="f" for="tsMula">Mula</label><input id="tsMula" type="time"></div>
+          <div><label class="f" for="tsTamat">Tamat</label><input id="tsTamat" type="time"></div>
+        </div>
+        <h3 class="lagi">Had lewat</h3>
+        <p class="muted">Murid yang tiba selepas masa ini dikira lewat. Tepat pada masa ini tidak lewat.</p>
+        <input id="tsHadLewat" type="time">
+        <h3 class="lagi">Had tindakan sebulan</h3>
+        <p class="muted">Murid yang lewat sebanyak ini (atau lebih) dalam sebulan disenaraikan dalam laporan "Capai had tindakan".</p>
+        <input id="tsHadTindakan" type="number" min="1" max="31" inputmode="numeric">
+        <h3 class="lagi">Sebab lewat</h3>
+        <p class="muted">Pilihan yang dipaparkan semasa merekod. Mengubah senarai ini tidak mengubah rekod lama.</p>
+        <div class="chips" id="tsSebab"></div>
+        <div class="row" style="margin-top:10px">
+          <input id="tsSebabBaru" maxlength="40" placeholder="Sebab baharu">
+          <button class="btn sec" id="btnTambahSebab" type="button" style="flex:0 0 auto;width:auto;margin-top:0">Tambah</button>
+        </div>
+        <button class="btn" id="btnSimpanTetapan">Simpan tetapan</button>
+        <div id="msgTetapan"></div>
+      </form>
     </section>
 
     <!-- LAPORAN -->
@@ -415,7 +451,8 @@ $('btnKeluar').addEventListener('click', () => {
 // Kosongkan semua data dari skrin dan kembali ke login
 function keluarUI(pesan) {
   Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], pengguna: [], laporan: null, csv: null, sheetRekod: null });
-  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'senaraiPengguna', 'msgPengguna', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
+  pilihSeg('pengguna');
+  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'senaraiPengguna', 'msgPengguna', 'msgTetapan', 'tsSebab', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
     .forEach(id => $(id).innerHTML = '');
   ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'mNama', 'mKelas', 'pfCari', 'pgNama'].forEach(id => $(id).value = '');
   tutupSheet();
@@ -479,7 +516,7 @@ document.querySelectorAll('#nav button').forEach(b => b.addEventListener('click'
   if (b.dataset.tab === 'rekod') muatMurid();
   if (b.dataset.tab === 'hariini') muatHariIni();
   if (b.dataset.tab === 'pelajar') muatPelajar();
-  if (b.dataset.tab === 'pengguna') muatPengguna();
+  if (b.dataset.tab === 'pengguna') { if ($('seg-sistem').hidden) muatPengguna(); else muatTetapan(); }
 }));
 
 // ---------- Jam ----------
@@ -900,6 +937,75 @@ async function uiStatusPengguna() {
     muatPengguna();
   } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
 }
+
+// ---------- Tetapan sistem (admin) ----------
+function pilihSeg(seg) {
+  document.querySelectorAll('#segTetapan button').forEach(b => b.classList.toggle('on', b.dataset.seg === seg));
+  $('seg-pengguna').hidden = seg !== 'pengguna';
+  $('seg-sistem').hidden = seg !== 'sistem';
+}
+$('segTetapan').addEventListener('click', e => {
+  const b = e.target.closest('[data-seg]');
+  if (!b) return;
+  pilihSeg(b.dataset.seg);
+  if (b.dataset.seg === 'sistem') muatTetapan();
+  else muatPengguna();
+});
+
+async function muatTetapan() {
+  msg($('msgTetapan'), '', '');
+  try {
+    const t = await call('getTetapan');
+    $('tsMula').value = t.tetingkap_pengawas_mula;
+    $('tsTamat').value = t.tetingkap_pengawas_tamat;
+    $('tsHadLewat').value = t.had_lewat;
+    $('tsHadTindakan').value = t.had_tindakan_sebulan;
+    S.sebabEdit = t.sebab_lewat.slice();
+    renderSebabEdit();
+  } catch (e) { if (!sesiTamat(e)) msg($('msgTetapan'), 'bad', esc(e.message)); }
+}
+
+function renderSebabEdit() {
+  $('tsSebab').innerHTML = S.sebabEdit.map((x, i) =>
+    `<span class="chip">${esc(x)}<button type="button" data-buang-sebab="${i}" aria-label="Buang ${esc(x)}">×</button></span>`).join('');
+}
+$('tsSebab').addEventListener('click', e => {
+  const b = e.target.closest('[data-buang-sebab]');
+  if (!b) return;
+  S.sebabEdit.splice(Number(b.dataset.buangSebab), 1);
+  renderSebabEdit();
+});
+
+function tambahSebab() {
+  const v = $('tsSebabBaru').value.replace(/\s+/g, ' ').trim();
+  if (!v) return;
+  if (/[,=+@]/.test(v) || /^-/.test(v)) return msg($('msgTetapan'), 'bad', 'Sebab tidak boleh mengandungi koma atau bermula dengan = + - @.');
+  if (S.sebabEdit.some(x => x.toLowerCase() === v.toLowerCase())) return msg($('msgTetapan'), 'bad', 'Sebab ini sudah ada.');
+  S.sebabEdit.push(v);
+  $('tsSebabBaru').value = '';
+  msg($('msgTetapan'), '', '');
+  renderSebabEdit();
+}
+$('btnTambahSebab').addEventListener('click', tambahSebab);
+$('tsSebabBaru').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tambahSebab(); } });
+
+$('seg-sistem').addEventListener('submit', async e => {
+  e.preventDefault();
+  const el = $('msgTetapan'), btn = $('btnSimpanTetapan');
+  btn.disabled = true; msg(el, '', '');
+  try {
+    const r = await call('simpanTetapan', {
+      tetingkap_pengawas_mula: $('tsMula').value, tetingkap_pengawas_tamat: $('tsTamat').value,
+      had_lewat: $('tsHadLewat').value, had_tindakan_sebulan: $('tsHadTindakan').value, sebab_lewat: S.sebabEdit
+    });
+    // Guna nilai baharu terus dalam skrin Rekod dan Laporan
+    S.init.config.waktuLewat = r.tetapan.waktuLewat;
+    S.init.config.hadTindakan = r.tetapan.hadTindakan;
+    S.init.sebab = r.sebab;
+    msg(el, 'ok', r.berubah ? `Tetapan disimpan (${r.berubah} perubahan).` : 'Tiada perubahan.');
+  } catch (err) { if (!sesiTamat(err)) msg(el, 'bad', esc(err.message)); }
+  finally { btn.disabled = false; }
+});
 
 // ---------- Laporan ----------
 $('btnJana').addEventListener('click', async () => {

@@ -533,6 +533,86 @@ function simpanImportMurid(token, data) {
   }
 }
 
+// ---------- Tetapan sistem (admin) ----------
+
+function getTetapan(token) {
+  requireUser_(token, ['ADMIN']);
+  const t = tetapan_();
+  return {
+    tetingkap_pengawas_mula: t.tetingkap_pengawas_mula,
+    tetingkap_pengawas_tamat: t.tetingkap_pengawas_tamat,
+    had_lewat: t.had_lewat,
+    had_tindakan_sebulan: hadTindakan_(),
+    sebab_lewat: senaraiSebab_()
+  };
+}
+
+// Semak semua nilai dahulu. Jika satu tidak sah, tiada apa disimpan.
+function simpanTetapan(token, input) {
+  const user = requireUser_(token, ['ADMIN']);
+  input = input || {};
+  const masa = function (v, label) {
+    v = String(v == null ? '' : v).trim();
+    const m = /^(\d{1,2}):(\d{2})$/.exec(v);
+    if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) throw new Error(label + ' mesti dalam format JJ:MM (contoh 07:20).');
+    return ('0' + Number(m[1])).slice(-2) + ':' + m[2];
+  };
+  const baru = {
+    tetingkap_pengawas_mula: masa(input.tetingkap_pengawas_mula, 'Waktu mula bertugas'),
+    tetingkap_pengawas_tamat: masa(input.tetingkap_pengawas_tamat, 'Waktu tamat bertugas'),
+    had_lewat: masa(input.had_lewat, 'Had lewat')
+  };
+  if (minitDari_(baru.tetingkap_pengawas_mula) >= minitDari_(baru.tetingkap_pengawas_tamat)) {
+    throw new Error('Waktu mula bertugas mesti sebelum waktu tamat.');
+  }
+  const had = String(input.had_tindakan_sebulan == null ? '' : input.had_tindakan_sebulan).trim();
+  if (!/^\d{1,2}$/.test(had) || Number(had) < 1 || Number(had) > 31) throw new Error('Had tindakan mesti nombor 1 hingga 31.');
+  baru.had_tindakan_sebulan = String(Number(had));
+
+  const sebab = (Array.isArray(input.sebab_lewat) ? input.sebab_lewat : []).map(function (x) {
+    return String(x == null ? '' : x).replace(/\s+/g, ' ').trim();
+  }).filter(String);
+  if (!sebab.length) throw new Error('Sekurang-kurangnya satu sebab lewat diperlukan.');
+  if (sebab.length > 15) throw new Error('Maksimum 15 sebab lewat.');
+  const dilihat = {};
+  sebab.forEach(function (x) {
+    if (x.length > 40) throw new Error('Sebab "' + x.slice(0, 20) + '..." terlalu panjang (maks 40 aksara).');
+    if (/[,=+@]/.test(x) || /^-/.test(x)) throw new Error('Sebab "' + x + '" tidak boleh mengandungi koma atau bermula dengan = + - @.');
+    if (dilihat[x.toLowerCase()]) throw new Error('Sebab "' + x + '" berganda.');
+    dilihat[x.toLowerCase()] = true;
+  });
+  baru.sebab_lewat = sebab.join(', ');
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const lama = tetapan_();
+    const sh = sheet_(TAB.TETAPAN);
+    const baris = {};
+    sh.getDataRange().getDisplayValues().forEach(function (r, i) { if (i > 0) baris[String(r[0]).trim()] = i + 1; });
+    const ubah = [];
+    Object.keys(baru).forEach(function (k) {
+      if (String(lama[k]) === baru[k]) return;
+      ubah.push(k + ': ' + lama[k] + ' -> ' + baru[k]);
+      if (baris[k]) {
+        sh.getRange(baris[k], 2).setValue(baru[k]);
+      } else {
+        const lalai = TETAPAN_LALAI.find(function (r) { return r[0] === k; });
+        sh.appendRow([k, baru[k], lalai ? lalai[2] : '']);
+      }
+    });
+    if (ubah.length) log_(user.id, 'TETAPAN_DIUBAH', ubah.join('; '));
+    return { berubah: ubah.length, tetapan: getTetapanTanpaSemak_(), sebab: senaraiSebab_() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function getTetapanTanpaSemak_() {
+  const t = tetapan_();
+  return { waktuLewat: t.had_lewat, hadTindakan: hadTindakan_() };
+}
+
 // ---------- Urus pengguna (admin) ----------
 // Hash_PIN dan Salt tidak pernah dihantar ke pelayar.
 
