@@ -636,6 +636,7 @@ $('sheet').addEventListener('click', async e => {
   }
   if (e.target.id === 'shRekod') return uiSimpanRekod();
   if (e.target.id === 'shBatalRekod') return uiBatalRekod();
+  if (e.target.id === 'shSimpanSemak') return uiSimpanSemak();
   if (e.target.id === 'shSimpanMurid') return uiSimpanMurid();
   if (e.target.id === 'shResetPin') return uiResetPin();
   if (e.target.id === 'shStatusPengguna') return uiStatusPengguna();
@@ -671,7 +672,7 @@ async function muatHariIni() {
     const n = S.rekodHariIni.length;
     $('bilHariIni').textContent = `${n} rekod`;
     box.innerHTML = n ? S.rekodHariIni.map(r => `<button class="item" data-rekod="${esc(r.id)}">
-      <span class="txt"><span class="nm">${esc(r.nama)}</span><span class="sub"> ${esc(r.kelas)}${r.sebab ? ' · ' + esc(r.sebab) : ''}${r.lewat ? '' : ' · tidak lewat'}</span></span>
+      <span class="txt"><span class="nm">${esc(r.nama)}</span><span class="sub"> ${esc(r.kelas)}${r.sebab ? ' · ' + esc(r.sebab) : ''}${r.lewat ? ' · ' + esc(r.status || 'menunggu semakan') : ' · tidak lewat'}</span></span>
       ${tagMasa(r.masa, r.lewat)}</button>`).join('')
       : '<div class="kosong">Tiada rekod lagi hari ini.</div>';
   } catch (e) { if (!sesiTamat(e)) box.innerHTML = `<div class="kosong">${esc(e.message)}</div>`; }
@@ -682,14 +683,8 @@ $('senaraiHariIni').addEventListener('click', e => {
   if (!b) return;
   const r = S.rekodHariIni.find(x => x.id === b.dataset.rekod);
   if (!r) return;
-  if (!r.bolehBatal) return toast('Anda hanya boleh membatalkan rekod sendiri pada hari yang sama.', true);
-  S.sheetBatal = r;
-  bukaSheet(`<h3>Batalkan rekod?</h3><div class="muted">${esc(r.nama)} · ${esc(r.kelas)} · direkod ${esc(r.masa)} oleh ${esc(r.oleh)}</div>
-    ${r.perluCatatan ? '<label class="f" for="shCatatan">Catatan sebab pembatalan (wajib)</label><textarea id="shCatatan" maxlength="200"></textarea>' : ''}
-    <p class="muted">Rekod tidak dipadam. Ia ditanda dibatalkan dan tidak dikira dalam laporan.</p>
-    <button class="btn danger" id="shBatalRekod">Batalkan rekod</button>
-    <button class="btn sec" data-tutup>Tutup</button>
-    <div id="shMsg"></div>`);
+  if (!r.bolehBatal && !r.bolehSemak) return toast('Tiada tindakan untuk rekod ni.', true);
+  bukaSheetRekod2(r);
 });
 
 async function uiBatalRekod() {
@@ -1112,7 +1107,62 @@ function renderLaporan() {
     ${senaraiKira(r.kerap, 'Tiada kes kelewatan dalam tempoh ini.')}
     <div class="sechead"><h2>Capai had tindakan</h2><span class="muted">${BULAN[mo - 1]} ${y} · ${r.had} kali atau lebih</span></div>
     ${senaraiKira(r.melepasiHad, 'Tiada pelajar mencapai had bulan ini.')}
+    <div class="sechead"><h2>Senarai rekod</h2><span class="muted">${r.list.length} rekod${r.list.length > 200 ? ', 200 pertama' : ''}</span></div>
+    <div class="list">${r.list.length ? r.list.slice(0, 200).map((x, i) => `<button class="item" data-semak="${i}">
+      <span class="txt"><span class="nm">${esc(x.nama)}</span><span class="sub"> ${esc(fmtD(x.tarikh))} · ${esc(x.kelas)} · ${esc(x.status || 'menunggu semakan')}</span></span>
+      <span class="tag bad">${esc(x.masa)}</span></button>`).join('') : '<div class="kosong">Tiada rekod dalam tempoh ni.</div>'}</div>
     <button class="btn sec" id="btnCsv" ${r.list.length ? '' : 'disabled'}>Eksport CSV</button>`;
+}
+
+$('hasilLaporan').addEventListener('click', e => {
+  const b = e.target.closest('[data-semak]');
+  if (!b) return;
+  const x = S.laporan.list[Number(b.dataset.semak)];
+  if (!x) return;
+  bukaSheetRekod2(Object.assign({}, x, { lewat: true, batal: false, bolehBatal: false, bolehSemak: ['GURU', 'ADMIN'].includes(S.init.user.peranan) }));
+});
+
+// Satu sheet untuk rekod: semakan tindakan (guru/admin) dan batal (ikut peranan)
+function bukaSheetRekod2(r) {
+  const boleh = r.bolehSemak;
+  const status = r.status || 'menunggu semakan';
+  const cls = status === 'sah' ? 'ok' : status === 'dinaikkan' ? 'bad' : '';
+  S.sheetSemak = r; S.sheetBatal = r;
+  bukaSheet(`<h3>${esc(r.nama)}</h3>
+    <div class="muted">${esc(r.kelas)} · ${esc(r.idMurid)} · ${esc(fmtD(r.tarikh || ''))} · masa ${esc(r.masa)}</div>
+    <div class="muted" style="margin-top:6px">Sebab: ${esc(r.sebab || 'tiada')} · direkod oleh ${esc(r.oleh || '')}</div>
+    <div style="margin:12px 0"><span class="tag ${cls}">${esc(status)}</span></div>
+    ${r.catatanDisiplin ? `<div class="muted" style="margin-bottom:12px">Catatan disiplin: ${esc(r.catatanDisiplin)}</div>` : ''}
+    ${boleh ? `<div class="sechead" style="margin:6px 0"><h2>Tindakan disiplin</h2></div>
+      <label class="f" for="shStatusSemak">Tandakan sebagai</label>
+      <select id="shStatusSemak"><option value="sah"${status === 'sah' ? ' selected' : ''}>Sah</option>
+        <option value="dinaikkan"${status === 'dinaikkan' ? ' selected' : ''}>Dinaikkan</option></select>
+      <label class="f" for="shCatatanSemak">Catatan disiplin (pilihan)</label>
+      <textarea id="shCatatanSemak" maxlength="200"></textarea>
+      <button class="btn" id="shSimpanSemak">Simpan tindakan</button>` : ''}
+    ${r.bolehBatal ? `<div class="sechead" style="margin:14px 0 6px"><h2>Batal rekod</h2></div>
+      ${r.perluCatatan ? '<label class="f" for="shCatatan">Catatan sebab pembatalan (wajib)</label><textarea id="shCatatan" maxlength="200"></textarea>' : ''}
+      <p class="muted">Rekod tidak dipadam. Ia ditanda dibatalkan dan tidak dikira dalam laporan.</p>
+      <button class="btn danger" id="shBatalRekod">Batalkan rekod</button>` : ''}
+    <button class="btn sec" data-tutup>Tutup</button>
+    <div id="shMsg"></div>`);
+}
+
+async function uiSimpanSemak() {
+  const r = S.sheetSemak, btn = $('shSimpanSemak');
+  const status = $('shStatusSemak').value, catatan = $('shCatatanSemak').value.trim();
+  btn.disabled = true;
+  try {
+    await call('semakRekod', r.id, status, catatan);
+    if (S.laporan) {
+      const it = S.laporan.list.find(x => x.id === r.id);
+      if (it) { it.status = status; if (catatan) it.catatanDisiplin = catatan; }
+      renderLaporan();
+    }
+    tutupSheet();
+    toast(`${r.nama}: ${status}.`);
+    muatHariIni();
+  } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
 }
 
 $('hasilLaporan').addEventListener('click', e => {
