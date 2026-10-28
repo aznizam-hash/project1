@@ -1,4 +1,4 @@
-# Semarak Tepat — Panduan Setup
+# SemarakLateRecord — Panduan Setup
 
 Sistem rekod kelewatan murid. Guna Google Sheets + Apps Script. Pengguna login dengan **ID dan PIN 6 digit** (contoh `PGW001`), bukan akaun Google.
 
@@ -28,16 +28,16 @@ Akaun demo (PIN semua `246810`): `ADM001` (admin), `GRU001` (guru disiplin), `PG
 
 Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Apps Script mesti dimiliki akaun sekolah.
 
-1. **Buat Google Sheet baru**. Namakan `Semarak Tepat`.
+1. **Buat Google Sheet baru**. Namakan `SemarakLateRecord`.
 2. Dalam Sheet tu, buka **Extensions > Apps Script**.
 3. Padam kod dalam `Code.gs`, kemudian paste isi fail `Code.gs`.
 4. Klik **+ > HTML**, namakan `Index` (huruf besar I, tanpa .html), kemudian paste isi `index.html`.
 5. Dalam `Code.gs`, edit `NAMA_SEKOLAH` dalam bahagian `CONFIG`. Lepas tu tekan Save.
-6. Kembali ke Sheet dan refresh. Menu **Semarak Tepat** akan muncul.
-7. Klik **Semarak Tepat > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
+6. Kembali ke Sheet dan refresh. Menu **SemarakLateRecord** akan muncul.
+7. Klik **SemarakLateRecord > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
    - Tab `Murid`, `Rekod`, `Pengguna`, `Tetapan` dan `LogAudit` akan dibuat. Tab versi lama (contoh `MURID` dengan No. Daftar) ditukar nama jadi `..._LAMA`, tidak dipadam.
    - Akaun admin pertama (`ADM001`) dicipta. **Catat PIN sementara yang dipaparkan.** Ia tak akan dipaparkan lagi.
-8. **Tambah pengguna:** **Semarak Tepat > 2. Tambah pengguna**. Isi nama dan peranan (`PENGAWAS`, `GURU` atau `ADMIN`). ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
+8. **Tambah pengguna:** **SemarakLateRecord > 2. Tambah pengguna**. Isi nama dan peranan (`PENGAWAS`, `GURU` atau `ADMIN`). ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
 9. Semak tab `Tetapan` (waktu bertugas pengawas, had lewat, had tindakan, senarai sebab). Buat masa ni nilai diubah terus dalam Sheet. Borang tetapan dalam web app akan datang.
 10. **Data murid:** untuk ujian, guna **4. Masukkan murid olok-olok**. Jangan guna data murid sebenar sehingga semua ujian peranan dan import lulus.
 11. **Deploy:** dalam Apps Script, pergi ke **Deploy > New deployment > Web app**.

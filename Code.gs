@@ -1,5 +1,5 @@
 /**
- * SEMARAK TEPAT — sistem rekod kelewatan murid (backend Google Apps Script)
+ * SEMARAKLATERECORD — sistem rekod kelewatan murid (backend Google Apps Script)
  * Script ini mesti dibuka dari Google Sheet (Extensions > Apps Script).
  *
  * Nota keselamatan:
@@ -45,7 +45,7 @@ const RALAT_LOGIN = 'ID atau PIN tidak sah.';
 // ---------- Menu & setup (dijalankan dari Google Sheet) ----------
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('Semarak Tepat')
+  SpreadsheetApp.getUi().createMenu('SemarakLateRecord')
     .addItem('1. Setup tab', 'setupSheets')
     .addItem('2. Tambah pengguna', 'menuTambahPengguna')
     .addItem('3. Reset PIN pengguna', 'menuResetPin')
@@ -158,7 +158,7 @@ function menuMuridOlokOlok() {
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Semarak Tepat')
+    .setTitle('SemarakLateRecord')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
