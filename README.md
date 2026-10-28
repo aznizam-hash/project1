@@ -74,15 +74,26 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 
 Tab **Pelajar** dalam web app:
 - **Tambah seorang pelajar:** isi nama, tingkatan dan kelas. ID (`MUR0001`, `MUR0002`, ...) dijana sistem dan tidak pernah digunakan semula.
-- **Pindah atau berhenti:** tekan butang status **Aktif** untuk tukar jadi tidak aktif. Rekod lama kekal dalam laporan.
+- **Edit pelajar:** ketik nama dalam senarai untuk ubah nama, tingkatan, kelas atau status. ID kekal, jadi rekod lama masih di bawah pelajar yang sama. Perubahan direkod dalam `LogAudit`.
+- **Pindah atau berhenti:** tekan butang status **Aktif** (atau Edit) untuk tukar jadi tidak aktif. Rekod lama kekal dalam laporan.
 - **Import CSV:** muat turun template, isi dalam Excel, Save As **CSV UTF-8**, kemudian pilih fail.
   - Lajur wajib: `Nama, Tingkatan, Kelas` (Tingkatan 1 hingga 5, Kelas contoh `Amanah`).
   - Sistem semak dulu. Jika ada satu baris bermasalah, **tiada apa disimpan** dan senarai ralat dipaparkan.
-  - Pelajar sedia ada dipadankan ikut nama + tingkatan + kelas. Pelajar baharu ditambah. Pelajar yang **tiada dalam fail ditanda tidak aktif** (tidak dipadam). Jadi fail mesti senarai penuh semua kelas.
+  - Jika fail ada lajur `ID_Murid` (dari butang Eksport), baris yang ada ID dipadankan ikut ID dan nama/tingkatan/kelas dikemas kini. Baris tanpa ID dipadankan ikut nama + tingkatan + kelas, atau ditambah sebagai pelajar baharu. Pelajar yang **tiada dalam fail ditanda tidak aktif** (tidak dipadam). Jadi fail mesti senarai penuh semua kelas.
   - Sebelum simpan, tab `Murid` dibackup ke tab baharu `Murid_backup_<tarikh>`.
   - Teks yang bermula dengan `=`, `+`, `-` atau `@` disimpan sebagai teks (elak formula injection).
 
-> Had padanan ikut nama: bila murid naik tingkatan awal tahun, tingkatan dalam fail baharu berbeza, jadi sistem akan cipta ID baharu dan tandakan ID lama tidak aktif. Rekod lama kekal di bawah ID lama.
+### Awal tahun (kelas disusun semula)
+
+1. Tab **Pelajar** > **Eksport senarai pelajar**. Fail CSV mengandungi `ID_Murid, Nama, Tingkatan, Kelas` untuk semua pelajar aktif.
+2. Buka dalam Excel:
+   - Tukar **Tingkatan** dan **Kelas** ikut susunan tahun baru.
+   - **Padam baris** pelajar Tingkatan 5 yang tamat dan pelajar yang pindah keluar. Mereka akan jadi tidak aktif.
+   - **Tambah baris** pelajar baharu dengan lajur `ID_Murid` dibiarkan kosong.
+   - Jangan ubah lajur `ID_Murid` untuk pelajar sedia ada.
+3. Save As **CSV UTF-8**, kemudian **Pilih fail CSV**. Semak ringkasan (baharu, dikemas kini, jadi tidak aktif) sebelum tekan **Simpan import**.
+
+ID dan sejarah rekod setiap pelajar kekal walaupun kelas bertukar. Tab `Murid` dibackup secara automatik sebelum disimpan.
 
 ## Laporan (guru disiplin dan admin)
 
@@ -109,6 +120,8 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Pengawas hanya nampak tab Rekod dan Hari ini, dan hanya rekod sendiri dalam Hari ini.
 - [ ] Guru disiplin tidak boleh batal rekod pengawas. Admin boleh, dengan catatan.
 - [ ] Import CSV dengan satu baris rosak: tiada apa disimpan. Import fail betul: tab backup dicipta.
+- [ ] Edit seorang pelajar (tukar kelas): ID sama, rekod lama masih ada dalam laporan.
+- [ ] Eksport, tukar kelas dalam Excel, import semula: ID kekal dan kelas baru dipaparkan.
 - [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
 
 ## Nota PDPA

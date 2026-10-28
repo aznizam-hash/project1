@@ -447,6 +447,32 @@ function tambahMurid(token, input) {
   }
 }
 
+// Edit seorang pelajar. ID kekal, jadi semua rekod lama masih di bawah murid yang sama.
+function kemaskiniMurid(token, idMurid, input) {
+  const user = requireUser_(token, ['ADMIN']);
+  input = input || {};
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const semua = readMurid_();
+    const lama = semua.find(function (x) { return x.id === String(idMurid); });
+    if (!lama) throw new Error('Murid tidak dijumpai.');
+    const m = normMurid_(input.nama, input.tingkatan, input.kelas, semua);
+    const aktif = input.aktif !== false;
+    const sama = semua.find(function (x) { return x.id !== lama.id && x.aktif && kunciMurid_(x) === kunciMurid_(m); });
+    if (sama && aktif) throw new Error(m.nama + ' sudah ada dalam ' + sama.label + ' (' + sama.id + ').');
+    sheet_(TAB.MURID).getRange(lama._row, 2, 1, 4).setValues([[m.nama, m.tingkatan, m.kelas, aktif ? 'aktif' : 'tidak aktif']]);
+    const ubah = [];
+    if (lama.nama !== m.nama) ubah.push('nama ' + lama.nama + ' -> ' + m.nama);
+    if (lama.label !== m.tingkatan + ' ' + m.kelas) ubah.push('kelas ' + lama.label + ' -> ' + m.tingkatan + ' ' + m.kelas);
+    if (lama.aktif !== aktif) ubah.push(aktif ? 'aktif' : 'tidak aktif');
+    log_(user.id, 'MURID_DIUBAH', lama.id + ': ' + (ubah.join('; ') || 'tiada perubahan'));
+    return { senaraiKelas: senaraiKelas_() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function tukarStatusMurid(token, idMurid, aktif) {
   const user = requireUser_(token, ['ADMIN']);
   const lock = LockService.getScriptLock();
@@ -466,7 +492,10 @@ function tukarStatusMurid(token, idMurid, aktif) {
 function semakImportMurid(token, data) {
   requireUser_(token, ['ADMIN']);
   const p = rancangImport_(data, readMurid_());
-  return { ralat: p.ralat, baru: p.baru.length, kekal: p.kekal, aktifSemula: p.aktifSemula.length,
+  return { ralat: p.ralat, baru: p.baru.length, kekal: p.kekal, kemaskini: p.kemaskini.length, aktifSemula: p.aktifSemula.length,
+    contohKemaskini: p.kemaskini.slice(0, 10).map(function (x) {
+      return x.sedia.nama + ': ' + x.sedia.label + ' → ' + x.baru.tingkatan + ' ' + x.baru.kelas;
+    }),
     tidakAktif: p.tidakAktif.length, contohTidakAktif: p.tidakAktif.slice(0, 10).map(function (m) { return m.nama + ' (' + m.label + ')'; }),
     amaran: p.amaran };
 }
@@ -485,13 +514,17 @@ function simpanImportMurid(token, data) {
     const namaBackup = 'Murid_backup_' + fmt_(new Date(), 'yyyyMMdd_HHmmss');
     sheet_(TAB.MURID).copyTo(ss).setName(namaBackup);
 
-    // Kemas kini lajur Status sekali gus (lebih laju daripada satu sel satu panggilan)
+    // Kemas kini Nama, Tingkatan, Kelas dan Status sekali gus (lebih laju daripada satu sel satu panggilan)
     const sh = sheet_(TAB.MURID);
     if (semua.length) {
-      const status = sh.getRange(2, 5, sh.getLastRow() - 1, 1).getValues();
-      p.aktifSemula.forEach(function (m) { status[m._row - 2][0] = 'aktif'; });
-      p.tidakAktif.forEach(function (m) { status[m._row - 2][0] = 'tidak aktif'; });
-      sh.getRange(2, 5, status.length, 1).setValues(status);
+      const v = sh.getRange(2, 2, sh.getLastRow() - 1, 4).getValues();
+      p.kemaskini.forEach(function (x) {
+        const r = v[x.sedia._row - 2];
+        r[0] = x.baru.nama; r[1] = x.baru.tingkatan; r[2] = x.baru.kelas;
+      });
+      p.aktifSemula.forEach(function (m) { v[m._row - 2][3] = 'aktif'; });
+      p.tidakAktif.forEach(function (m) { v[m._row - 2][3] = 'tidak aktif'; });
+      sh.getRange(2, 2, v.length, 4).setValues(v);
     }
     let seq = seqMurid_(semua);
     const rows = p.baru.map(function (m) { return [idMuridBaru_(seq++), m.nama, m.tingkatan, m.kelas, 'aktif']; });
@@ -499,10 +532,11 @@ function simpanImportMurid(token, data) {
       sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
       simpanSeqMurid_(rows[rows.length - 1][0]);
     }
-    log_(user.id, 'MURID_DIIMPORT', 'Baru ' + rows.length + ', kekal ' + p.kekal + ', aktif semula ' + p.aktifSemula.length +
+    log_(user.id, 'MURID_DIIMPORT', 'Baru ' + rows.length + ', kekal ' + p.kekal + ', dikemas kini ' + p.kemaskini.length +
+      ', aktif semula ' + p.aktifSemula.length +
       ', tidak aktif ' + p.tidakAktif.length + '. Backup: ' + namaBackup);
-    return { baru: rows.length, kekal: p.kekal, aktifSemula: p.aktifSemula.length, tidakAktif: p.tidakAktif.length,
-      backup: namaBackup, senaraiKelas: senaraiKelas_() };
+    return { baru: rows.length, kekal: p.kekal, kemaskini: p.kemaskini.length, aktifSemula: p.aktifSemula.length,
+      tidakAktif: p.tidakAktif.length, backup: namaBackup, senaraiKelas: senaraiKelas_() };
   } finally {
     lock.releaseLock();
   }
@@ -718,18 +752,25 @@ function kunciMurid_(m) {
 }
 
 // Rancang import CSV tanpa menulis apa-apa. data = array baris, baris pertama header.
+// Jika ada lajur ID_Murid (fail dari Eksport), baris yang ada ID dipadankan ikut ID dan
+// nama/tingkatan/kelas dikemas kini. Baris tanpa ID dipadankan ikut nama + tingkatan + kelas.
 function rancangImport_(data, semua) {
   if (!Array.isArray(data) || data.length < 2) throw new Error('Fail kosong atau tiada baris data.');
   if (data.length > CONFIG.MAKS_IMPORT + 1) throw new Error('Maksimum ' + CONFIG.MAKS_IMPORT + ' murid sekali import.');
-  const head = (data[0] || []).map(function (h) { return String(h).replace(/^﻿/, '').trim().toUpperCase(); });
+  const head = (data[0] || []).map(function (h) { return String(h).replace(/^\uFEFF/, '').trim().toUpperCase().replace(/[\s_]+/g, '_'); });
   const col = { nama: head.indexOf('NAMA'), tingkatan: head.indexOf('TINGKATAN'), kelas: head.indexOf('KELAS') };
   const hilang = Object.keys(col).filter(function (k) { return col[k] === -1; });
   if (hilang.length) throw new Error('Lajur tidak dijumpai: ' + hilang.join(', ') + '. Baris pertama mesti Nama, Tingkatan, Kelas.');
+  const colId = head.indexOf('ID_MURID');
 
+  const ikutId = {};
   const indeks = {};
-  semua.forEach(function (m) { (indeks[kunciMurid_(m)] = indeks[kunciMurid_(m)] || []).push(m); });
+  semua.forEach(function (m) {
+    ikutId[m.id.toUpperCase()] = m;
+    (indeks[kunciMurid_(m)] = indeks[kunciMurid_(m)] || []).push(m);
+  });
 
-  const p = { ralat: [], baru: [], kekal: 0, aktifSemula: [], tidakAktif: [], amaran: '' };
+  const p = { ralat: [], baru: [], kekal: 0, kemaskini: [], aktifSemula: [], tidakAktif: [], amaran: '' };
   const dalamFail = {};
   const dipadan = {};
   data.slice(1).forEach(function (r, i) {
@@ -742,24 +783,39 @@ function rancangImport_(data, semua) {
       p.ralat.push('Baris ' + baris + ': ' + e.message);
       return;
     }
-    const k = kunciMurid_(m);
-    if (dalamFail[k]) {
-      p.ralat.push('Baris ' + baris + ': ' + m.nama + ' (' + m.tingkatan + ' ' + m.kelas + ') berganda dengan baris ' + dalamFail[k] + '.');
-      return;
-    }
-    dalamFail[k] = baris;
-    const padan = indeks[k] || [];
-    if (padan.length > 1) {
-      p.ralat.push('Baris ' + baris + ': ada ' + padan.length + ' murid bernama ' + m.nama + ' dalam ' + m.tingkatan + ' ' + m.kelas +
-        ' (' + padan.map(function (x) { return x.id; }).join(', ') + '). Betulkan dalam tab Murid dahulu.');
-      return;
-    }
-    if (padan.length === 1) {
-      dipadan[padan[0].id] = true;
-      if (padan[0].aktif) p.kekal++;
-      else p.aktifSemula.push(padan[0]);
+
+    const id = colId > -1 ? String(r[colId] == null ? '' : r[colId]).trim().toUpperCase() : '';
+    let sedia = null;
+    if (id) {
+      sedia = ikutId[id];
+      if (!sedia) { p.ralat.push('Baris ' + baris + ': ID ' + id + ' tidak wujud. Kosongkan ID untuk pelajar baharu.'); return; }
     } else {
-      p.baru.push(m);
+      const k = kunciMurid_(m);
+      if (dalamFail[k]) {
+        p.ralat.push('Baris ' + baris + ': ' + m.nama + ' (' + m.tingkatan + ' ' + m.kelas + ') berganda dengan baris ' + dalamFail[k] + '.');
+        return;
+      }
+      dalamFail[k] = baris;
+      const padan = indeks[k] || [];
+      if (padan.length > 1) {
+        p.ralat.push('Baris ' + baris + ': ada ' + padan.length + ' murid bernama ' + m.nama + ' dalam ' + m.tingkatan + ' ' + m.kelas +
+          ' (' + padan.map(function (x) { return x.id; }).join(', ') + '). Isi lajur ID_Murid untuk bezakan.');
+        return;
+      }
+      sedia = padan[0] || null;
+    }
+
+    if (!sedia) { p.baru.push(m); return; }
+    if (dipadan[sedia.id]) {
+      p.ralat.push('Baris ' + baris + ': ' + sedia.id + ' (' + sedia.nama + ') muncul lebih sekali dalam fail (sama dengan baris ' + dipadan[sedia.id] + ').');
+      return;
+    }
+    dipadan[sedia.id] = baris;
+    if (!sedia.aktif) p.aktifSemula.push(sedia);
+    if (sedia.nama !== m.nama || String(sedia.tingkatan) !== String(m.tingkatan) || sedia.kelas !== m.kelas) {
+      p.kemaskini.push({ sedia: sedia, baru: m });
+    } else if (sedia.aktif) {
+      p.kekal++;
     }
   });
 
