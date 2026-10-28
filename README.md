@@ -161,6 +161,8 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - **Tempoh simpanan:** 2 tahun dari tarikh rekod. Rekod, dan salinan backup yang mengandungi rekod tu, dipadam bila tempoh tamat. Admin yang buat pemadaman. Tempoh ni cadangan, belum disahkan dengan arahan KPM atau pegawai PDPA sekolah.
 - **Pemadaman automatik:** pasang sekali dengan menu **SemarakLateRecord > 7. Pasang pemadaman automatik**. Setiap bulan (tarikh 1, jam 3 pagi):
   - Baris `Rekod` dan `LogAudit` yang lebih 2 tahun dipadam terus dari Sheet.
+  - Murid yang **tidak aktif lebih 2 tahun** (dikira dari lajur `Tarikh_Tidak_Aktif` dalam tab Murid) juga dipadam dari tab Murid. Rekod lama murid tu kekal, tapi laporan akan tunjuk ID murid dan bukan nama.
+  - Murid tidak aktif yang dah sedia ada, tanpa tarikh, dicatat dengan tarikh hari pemadaman pertama. Jadi 2 tahun bermula dari situ.
   - Salinan backup yang lebih 2 tahun dipindah ke **Trash** Drive. Boleh dipulihkan dalam 30 hari, lepas tu dipadam kekal oleh Drive.
   - Satu entri `PEMADAMAN_AUTO` dicatat dalam `LogAudit` dengan jumlah yang dipadam.
 - **Semak dulu:** menu **6. Semak data yang akan dipadam** tunjuk jumlah tanpa padam apa-apa. Guna menu ni sebelum tunggu bulan pertama.
@@ -170,6 +172,6 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 
 ## Nota PDPA
 
-- Data murid disimpan: ID sistem, Nama, Tingkatan, Kelas, Status, dan rekod kelewatan. Tiada No. KP atau IC.
+- Data murid disimpan: ID sistem, Nama, Tingkatan, Kelas, Status, Tarikh_Tidak_Aktif, dan rekod kelewatan. Tiada No. KP atau IC.
 - Akses dikawal ikut tab `Pengguna`. Setiap request semak sesi dan peranan di server. Tiada data dimuat sebelum login.
 - Cadangan: pada awal tahun baru, buat salinan Sheet sebagai arkib, kemudian kosongkan tab `Rekod`. Tempoh simpan rekod masih belum diputuskan (brief bahagian 8).
