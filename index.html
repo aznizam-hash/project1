@@ -3,262 +3,287 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semarak Tepat</title>
 <style>
-  :root { --bg:#f5f6f8; --card:#fff; --ink:#1d2433; --muted:#667085; --line:#e3e6eb;
-          --pri:#1f5fbf; --pri-ink:#fff; --ok:#13795b; --warn:#b54708; --bad:#b42318; }
+  :root {
+    --bg:#eef1f6; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --pri:#0b4f8a; --pri-soft:#e1edf9; --ok:#15803d; --ok-soft:#dcfce7;
+    --bad:#c0262d; --bad-soft:#fde8e8; --warn:#92400e; --warn-soft:#fef3c7; --info:#0b4f8a; --info-soft:#e3eefa;
+  }
   * { box-sizing:border-box; }
   [hidden] { display:none !important; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  header { background:var(--pri); color:var(--pri-ink); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
-  header .btn { background:rgba(255,255,255,.15); color:var(--pri-ink); flex:none; }
-  .skrin { max-width:380px; margin:24px auto; padding:0 16px; }
-  header h1 { margin:0; font-size:17px; }
-  header small { opacity:.85; }
-  nav { display:flex; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
-  nav button { flex:1; border:0; background:none; padding:12px 4px; font:inherit; color:var(--muted); border-bottom:3px solid transparent; }
-  nav button.on { color:var(--pri); border-color:var(--pri); font-weight:600; }
-  main { max-width:900px; margin:0 auto; padding:12px 16px 40px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; }
-  .card h2 { font-size:15px; margin:0 0 10px; }
-  label { display:block; font-size:13px; color:var(--muted); margin:8px 0 4px; }
-  select, input, textarea { width:100%; padding:10px; font:inherit; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); }
-  textarea { min-height:60px; }
-  .row { display:flex; gap:8px; flex-wrap:wrap; }
-  .row > * { flex:1 1 140px; }
-  .btn { display:inline-block; border:0; border-radius:8px; padding:11px 16px; font:inherit; font-weight:600; background:var(--pri); color:var(--pri-ink); cursor:pointer; }
-  .btn.sec { background:#e8eef9; color:var(--pri); }
-  .btn.bad { background:#fdecea; color:var(--bad); }
-  .btn.sm { padding:6px 10px; font-size:13px; }
-  .btn:disabled { opacity:.5; }
-  .full { width:100%; }
-  .jam { display:flex; justify-content:space-between; align-items:center; font-size:14px; }
-  .jam b { font-size:22px; }
-  .tag { display:inline-block; padding:2px 8px; border-radius:99px; font-size:12px; font-weight:600; background:#eef1f5; color:var(--muted); }
-  .tag.warn { background:#fef0c7; color:var(--warn); }
-  .tag.bad { background:#fdecea; color:var(--bad); }
-  .list { max-height:320px; overflow:auto; border:1px solid var(--line); border-radius:8px; margin-top:8px; }
-  .list label { display:flex; gap:10px; align-items:center; margin:0; padding:10px; color:var(--ink); font-size:15px; border-bottom:1px solid var(--line); }
-  .list label:last-child { border-bottom:0; }
-  .list input { width:20px; height:20px; flex:none; }
-  .hasil button { display:block; width:100%; text-align:left; border:0; border-bottom:1px solid var(--line); background:none; padding:10px; font:inherit; }
-  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .chip { background:#e8eef9; color:var(--pri); border-radius:99px; padding:4px 6px 4px 10px; font-size:13px; }
-  .chip button { border:0; background:none; color:inherit; font-weight:700; cursor:pointer; }
-  .msg { padding:10px; border-radius:8px; margin-top:10px; }
-  .msg.ok { background:#e7f6ef; color:var(--ok); }
-  .msg.bad { background:#fdecea; color:var(--bad); }
-  .msg ul { margin:6px 0 0; padding-left:18px; }
+  html, body { margin:0; }
+  body { background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-tap-highlight-color:transparent; }
+  button, input, select, textarea { font:inherit; color:inherit; }
+  button { cursor:pointer; }
+
+  /* Header */
+  .top { position:sticky; top:0; z-index:20; background:var(--card); border-bottom:1px solid var(--line);
+         display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; min-height:57px; }
+  .brand { font-weight:800; font-size:19px; letter-spacing:-.3px; white-space:nowrap; }
+  .brand span { color:var(--pri); }
+  .who { display:flex; align-items:center; gap:8px; min-width:0; font-size:14px; }
+  .who .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pill { background:var(--pri-soft); color:var(--pri); border-radius:99px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
+  .iconbtn { border:0; background:none; padding:6px; border-radius:8px; color:var(--muted); display:flex; }
+  .iconbtn:hover { background:var(--bg); }
+
+  .banner { background:var(--info-soft); color:var(--info); border-radius:12px; padding:12px 14px; font-size:14px; margin:16px 16px 0;
+            display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .banner button { margin-left:auto; border:1px solid currentColor; background:none; color:inherit; border-radius:8px; padding:4px 10px; font-size:13px; }
+
+  main { padding:16px 16px 100px; max-width:760px; margin:0 auto; }
+  h2.page { font-size:19px; margin:8px 0 14px; }
+  .sechead { display:flex; justify-content:space-between; align-items:baseline; margin:22px 2px 10px; }
+  .sechead h2 { font-size:18px; margin:0; }
   .muted { color:var(--muted); font-size:13px; }
-  .tbl { width:100%; border-collapse:collapse; font-size:14px; }
-  .tbl th, .tbl td { text-align:left; padding:7px 6px; border-bottom:1px solid var(--line); vertical-align:top; }
-  .tbl th { font-size:12px; color:var(--muted); font-weight:600; }
-  .scroll { overflow-x:auto; }
-  .stat { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:8px; }
-  .stat div { border:1px solid var(--line); border-radius:8px; padding:10px; }
-  .stat b { display:block; font-size:22px; }
-  .quick { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
-  dialog { border:0; border-radius:10px; width:min(420px,92vw); }
-  .print-only { display:none; }
-  #loading { padding:40px 16px; text-align:center; color:var(--muted); }
-  @media print {
-    header, nav, .no-print { display:none !important; }
-    .print-only { display:block; }
-    body { background:#fff; font-size:12px; }
-    main { padding:0; max-width:none; }
-    .card { border:0; padding:0; margin-bottom:14px; break-inside:avoid; }
-    .list, .scroll { max-height:none; overflow:visible; }
+
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+  .card h3 { margin:0 0 4px; font-size:16px; }
+  .card > p.muted:first-of-type { margin-top:0; }
+
+  /* Jam */
+  .clock { text-align:center; padding:26px 18px 18px; }
+  .clock .hm { font-size:76px; font-weight:800; letter-spacing:-3px; line-height:1; font-variant-numeric:tabular-nums; }
+  .clock .s { font-size:26px; color:var(--muted); font-weight:500; letter-spacing:0; margin-left:4px; }
+  .clock .tarikh { color:var(--muted); margin-top:10px; }
+  .clock hr { border:0; border-top:1px solid var(--line); margin:16px 0 14px; }
+  .clock .nota { font-size:14px; }
+
+  /* Borang */
+  label.f { display:block; font-size:13px; color:var(--muted); margin:12px 0 6px; }
+  input, select, textarea { width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+  input:focus, select:focus, textarea:focus { outline:2px solid var(--pri-soft); border-color:var(--pri); }
+  textarea { min-height:72px; resize:vertical; }
+  .search { padding:16px 18px; border-radius:14px; font-size:16px; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+  .row { display:flex; gap:10px; }
+  .row > * { flex:1; min-width:0; }
+
+  .btn { display:block; width:100%; border:0; border-radius:12px; padding:14px 16px; font-weight:700; background:var(--pri); color:#fff; margin-top:14px; }
+  .btn.sec { background:#fff; color:var(--ink); border:1px solid var(--line); margin-top:10px; }
+  .btn.danger { background:var(--bad); }
+  .btn:disabled { opacity:.55; cursor:default; }
+  .link { border:0; background:none; color:var(--pri); padding:0; font-weight:600; font-size:14px; }
+
+  /* Senarai */
+  .list { background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .item { display:flex; align-items:center; gap:12px; width:100%; text-align:left; border:0; background:none;
+          padding:14px 16px; border-bottom:1px solid var(--line); }
+  .list > .item:last-child { border-bottom:0; }
+  button.item:hover { background:#f8fafc; }
+  .item .txt { flex:1; min-width:0; }
+  .item .nm { font-weight:700; }
+  .item .sub { color:var(--muted); font-size:13px; }
+  .item.mati { opacity:.55; }
+  .kosong { padding:18px 16px; color:var(--muted); font-size:14px; }
+  .tag { border-radius:8px; padding:3px 10px; font-size:13px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; background:#eef1f5; color:var(--muted); }
+  .tag.bad { background:var(--bad-soft); color:var(--bad); }
+  .tag.ok { background:var(--ok-soft); color:var(--ok); }
+  button.tag { border:0; }
+
+  .msg { padding:10px 12px; border-radius:10px; margin-top:12px; font-size:14px; }
+  .msg.bad { background:var(--bad-soft); color:var(--bad); }
+  .msg.ok { background:var(--ok-soft); color:var(--ok); }
+  .msg.warn { background:var(--warn-soft); color:var(--warn); }
+  .msg ul { margin:6px 0 0; padding-left:18px; }
+
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+  .stats .card { margin:0; }
+  .stats b { display:block; font-size:32px; line-height:1.1; }
+  .ringkas { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:8px; margin-top:12px; }
+  .ringkas div { border:1px solid var(--line); border-radius:10px; padding:10px; font-size:13px; color:var(--muted); }
+  .ringkas b { display:block; font-size:22px; color:var(--ink); }
+
+  /* Navigasi: bawah di phone, sidebar di tablet */
+  .nav { position:fixed; left:0; right:0; bottom:0; z-index:15; background:var(--card); border-top:1px solid var(--line);
+         display:flex; padding-bottom:env(safe-area-inset-bottom); }
+  .nav button { flex:1; border:0; background:none; padding:10px 4px 9px; color:var(--muted); font-size:12px;
+                display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .nav button.on { color:var(--pri); font-weight:700; }
+  .nav svg, .iconbtn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+
+  @media (min-width: 768px) {
+    #app { display:grid; grid-template-columns:220px 1fr; }
+    .nav { position:sticky; top:57px; height:calc(100vh - 57px); flex-direction:column; border-top:0; border-right:1px solid var(--line); padding:14px 10px; gap:4px; }
+    .nav button { flex:none; flex-direction:row; gap:12px; font-size:15px; padding:11px 14px; border-radius:10px; }
+    .nav button.on { background:var(--pri-soft); }
+    main { padding-bottom:32px; width:100%; }
   }
+
+  /* Bottom sheet */
+  .overlay { position:fixed; inset:0; z-index:30; background:rgba(15,23,42,.45); }
+  .sheet { position:fixed; left:0; right:0; bottom:0; max-width:560px; margin:0 auto; background:var(--card);
+           border-radius:22px 22px 0 0; padding:10px 20px calc(20px + env(safe-area-inset-bottom)); max-height:90vh; overflow:auto;
+           animation:naik .18s ease-out; }
+  @keyframes naik { from { transform:translateY(30px); opacity:.6; } to { transform:none; opacity:1; } }
+  .sheet .handle { width:44px; height:5px; border-radius:99px; background:var(--line); margin:0 auto 14px; }
+  .sheet h3 { font-size:20px; margin:0; }
+  .waktu { display:flex; justify-content:space-between; align-items:center; border-radius:14px; padding:16px; margin:18px 0;
+           background:var(--bad-soft); color:var(--bad); }
+  .waktu b { font-size:32px; font-variant-numeric:tabular-nums; }
+  .waktu.ok { background:var(--ok-soft); color:var(--ok); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+  .chip { border:1px solid var(--line); background:#fff; border-radius:10px; padding:8px 14px; font-size:14px; }
+  .chip.on { background:var(--pri); border-color:var(--pri); color:#fff; }
+
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:40; background:var(--ink); color:#fff;
+           border-radius:12px; padding:12px 16px; font-size:14px; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 6px 20px rgba(0,0,0,.2); }
+  .toast.bad { background:var(--bad); }
+  @media (min-width: 768px) { .toast { bottom:28px; } }
+
+  .skrin { max-width:400px; margin:32px auto; padding:0 16px; }
+  .skrin .brand { text-align:center; font-size:26px; margin-bottom:6px; }
+  .skrin .muted.c { text-align:center; margin:0 0 20px; }
+  #loading { padding:48px 16px; text-align:center; color:var(--muted); }
 </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1 id="hSekolah">Smart Late Record</h1>
-    <small id="hUser"></small>
+<header class="top">
+  <div class="brand">Semarak<span>Tepat</span></div>
+  <div class="who" id="who" hidden>
+    <span class="nm" id="whoNama"></span>
+    <span class="pill" id="whoPeranan"></span>
+    <button class="iconbtn" id="btnKeluar" title="Log keluar" aria-label="Log keluar">
+      <svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10"/></svg>
+    </button>
   </div>
-  <button class="btn sm" id="btnKeluar" hidden>Log keluar</button>
 </header>
+<div id="banner" class="banner" hidden></div>
 <div id="loading">Memuatkan...</div>
 
 <!-- LOGIN -->
 <form id="skrinLogin" class="skrin" hidden autocomplete="off">
+  <div class="brand">Semarak<span>Tepat</span></div>
+  <p class="muted c" id="lgSekolah">Rekod kelewatan murid</p>
   <div class="card">
-    <h2>Log masuk</h2>
-    <label for="lgId">ID pengguna</label>
+    <h3>Log masuk</h3>
+    <label class="f" for="lgId">ID pengguna</label>
     <input id="lgId" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Contoh: PGW001">
-    <label for="lgPin">PIN (6 digit)</label>
+    <label class="f" for="lgPin">PIN (6 digit)</label>
     <input id="lgPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
-    <button class="btn full" id="btnLogin" style="margin-top:12px">Masuk</button>
+    <button class="btn" id="btnLogin">Masuk</button>
     <div id="msgLogin"></div>
-    <p class="muted">Guna peranti kongsi? Tekan Log keluar selepas guna dan jangan simpan PIN dalam pelayar.</p>
   </div>
+  <p class="muted">Guna peranti kongsi? Tekan butang log keluar selepas guna dan jangan simpan PIN dalam pelayar.</p>
 </form>
 
 <!-- TUKAR PIN -->
 <form id="skrinTukarPin" class="skrin" hidden autocomplete="off">
   <div class="card">
-    <h2>Tukar PIN</h2>
-    <p class="muted" style="margin-top:0">Anda perlu tukar PIN sementara sebelum guna sistem.</p>
-    <label for="tpLama">PIN semasa</label>
+    <h3>Tukar PIN</h3>
+    <p class="muted">Anda perlu tukar PIN sementara sebelum guna sistem.</p>
+    <label class="f" for="tpLama">PIN semasa</label>
     <input id="tpLama" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
-    <label for="tpBaru">PIN baru (6 digit)</label>
+    <label class="f" for="tpBaru">PIN baru (6 digit)</label>
     <input id="tpBaru" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
-    <label for="tpSah">Ulang PIN baru</label>
+    <label class="f" for="tpSah">Ulang PIN baru</label>
     <input id="tpSah" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
-    <button class="btn full" id="btnTukarPin" style="margin-top:12px">Simpan PIN baru</button>
+    <button class="btn" id="btnTukarPin">Simpan PIN baru</button>
     <div id="msgTukarPin"></div>
   </div>
 </form>
 
 <div id="app" hidden>
-  <nav class="no-print">
-    <button data-tab="rekod" class="on">Rekod</button>
-    <button data-tab="hariini">Hari Ini</button>
-    <button data-tab="laporan" id="navLaporan" hidden>Laporan</button>
-    <button data-tab="murid" id="navMurid" hidden>Pelajar</button>
+  <nav class="nav" id="nav">
+    <button data-tab="rekod" class="on">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Rekod</button>
+    <button data-tab="hariini">
+      <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg>Hari ini</button>
+    <button data-tab="pelajar" id="navPelajar" hidden>
+      <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17c.8-1.8 2.2-2.6 4-2.6s3.2.8 4 2.6"/></svg>Pelajar</button>
+    <button data-tab="laporan" id="navLaporan" hidden>
+      <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16v-4M12 16V8M15 16v-6"/></svg>Laporan</button>
   </nav>
 
   <main>
     <!-- REKOD -->
     <section id="tab-rekod">
-      <div class="card jam">
-        <div><span class="muted">Masa sekarang</span><br><b id="jam">--:--</b></div>
-        <span id="statusLewat" class="tag"></span>
+      <div class="card clock">
+        <div class="hm"><span id="jamHM">--:--</span><span class="s" id="jamS">--</span></div>
+        <div class="tarikh" id="jamTarikh"></div>
+        <hr>
+        <div class="nota">Masa ini akan dicap pada rekod yang anda buat.</div>
       </div>
-
-      <div class="card">
-        <h2>1. Pilih murid</h2>
-        <label for="kelas">Ikut kelas</label>
-        <select id="kelas"><option value="">-- Pilih kelas --</option></select>
-        <div id="senaraiKelas"></div>
-
-        <label for="cari">Atau cari nama (min. 3 huruf)</label>
-        <input id="cari" type="search" autocomplete="off" placeholder="Contoh: aiman">
-        <div id="hasilCari" class="hasil"></div>
-
-        <label>Dipilih (<span id="bilPilih">0</span>)</label>
-        <div id="chips" class="chips"><span class="muted">Belum ada murid dipilih.</span></div>
-      </div>
-
-      <div class="card">
-        <h2>2. Sebab kelewatan</h2>
-        <select id="sebab"></select>
-        <div id="catatanBox" hidden>
-          <label for="catatan">Catatan (wajib untuk Lain-lain)</label>
-          <textarea id="catatan" maxlength="200"></textarea>
-        </div>
-        <button id="btnSimpan" class="btn full" style="margin-top:12px">Simpan Rekod</button>
-        <div id="msgRekod"></div>
-      </div>
+      <input id="cari" class="search" type="search" placeholder="Cari nama atau ID murid" autocomplete="off">
+      <div class="sechead"><h2>Pelajar</h2><span class="muted" id="bilMurid"></span></div>
+      <div class="list" id="senaraiMurid"><div class="kosong">Memuatkan...</div></div>
     </section>
 
     <!-- HARI INI -->
     <section id="tab-hariini" hidden>
-      <div class="card">
-        <div class="row" style="align-items:center">
-          <h2 style="margin:0">Rekod hari ini (<span id="bilHariIni">0</span>)</h2>
-          <button class="btn sec sm" id="btnMuatHariIni" style="flex:0 0 auto">Muat semula</button>
+      <div class="sechead" style="margin-top:8px"><h2>Rekod hari ini</h2><span class="muted" id="bilHariIni"></span></div>
+      <div class="list" id="senaraiHariIni"></div>
+      <p class="muted">Tekan sebarang rekod untuk membatalkannya jika tersilap. Pengawas dan guru hanya boleh membatalkan rekod sendiri pada hari yang sama.</p>
+      <button class="link" id="btnMuatHariIni">Muat semula</button>
+    </section>
+
+    <!-- PELAJAR (admin) -->
+    <section id="tab-pelajar" hidden>
+      <h2 class="page">Urus pelajar</h2>
+      <form class="card" id="formMurid" autocomplete="off">
+        <h3>Tambah seorang pelajar</h3>
+        <p class="muted">Guna borang ini untuk pelajar baharu atau pertukaran kelas pertengahan tahun. ID dijana sistem.</p>
+        <label class="f" for="mNama">Nama penuh</label>
+        <input id="mNama" maxlength="150" placeholder="Contoh: Ahmad bin Ali">
+        <div class="row">
+          <div><label class="f" for="mTing">Tingkatan</label>
+            <select id="mTing"><option value="">Pilih</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+          <div><label class="f" for="mKelas">Kelas</label><input id="mKelas" list="dlKelas" maxlength="30" placeholder="Contoh: Amanah"></div>
         </div>
-        <div class="scroll"><table class="tbl" id="tblHariIni"></table></div>
+        <button class="btn" id="btnTambahMurid">Tambah pelajar</button>
+        <div id="msgMurid"></div>
+      </form>
+
+      <div class="card">
+        <h3>Import dari CSV</h3>
+        <p class="muted">Lajur: <b>Nama, Tingkatan, Kelas</b>. Jika ada satu baris bermasalah, tiada apa yang disimpan sehingga fail dibetulkan.</p>
+        <input id="csvFail" type="file" accept=".csv,text/csv" hidden>
+        <button class="btn sec" id="btnPilihCsv" type="button">Pilih fail CSV</button>
+        <p class="muted">Dari Excel: File &gt; Save As &gt; <b>CSV UTF-8</b>. Pelajar sedia ada dipadankan ikut nama, tingkatan dan kelas.
+          Pelajar yang tiada dalam fail akan ditanda tidak aktif (tidak dipadam). <button class="link" id="btnTemplate" type="button">Muat turun template</button></p>
+        <div id="csvHasil"></div>
       </div>
+
+      <div class="sechead"><h2>Senarai pelajar</h2><span class="muted" id="bilPelajar"></span></div>
+      <div class="row" style="margin-bottom:10px">
+        <input id="pfCari" type="search" placeholder="Cari nama atau ID">
+        <select id="pfKelas"><option value="">Semua kelas</option></select>
+      </div>
+      <div class="list" id="senaraiPelajar"></div>
+      <datalist id="dlKelas"></datalist>
     </section>
 
     <!-- LAPORAN -->
     <section id="tab-laporan" hidden>
-      <div class="card no-print">
-        <h2>Pilih tempoh</h2>
+      <h2 class="page">Laporan</h2>
+      <div class="card">
         <div class="row">
-          <div><label for="dari">Dari</label><input id="dari" type="date"></div>
-          <div><label for="hingga">Hingga</label><input id="hingga" type="date"></div>
+          <div><label class="f" for="lpDari">Dari</label><input id="lpDari" type="date"></div>
+          <div><label class="f" for="lpHingga">Hingga</label><input id="lpHingga" type="date"></div>
         </div>
-        <div class="quick">
-          <button class="btn sec sm" data-q="hari">Hari Ini</button>
-          <button class="btn sec sm" data-q="minggu">Minggu Ini</button>
-          <button class="btn sec sm" data-q="bulan">Bulan Ini</button>
-          <button class="btn sec sm" data-q="bulanLepas">Bulan Lepas</button>
-        </div>
-        <div class="row">
-          <div><label for="fKelas">Kelas</label><select id="fKelas"><option value="">Semua</option></select></div>
-          <div><label for="fSebab">Sebab</label><select id="fSebab"><option value="">Semua</option></select></div>
-          <div><label for="fHad">Tanda kerap jika ≥</label><input id="fHad" type="number" min="1" max="50"></div>
-        </div>
-        <button id="btnJana" class="btn full" style="margin-top:12px">Jana Laporan</button>
+        <label class="f" for="lpKelas">Kelas</label>
+        <select id="lpKelas"><option value="">Semua kelas</option></select>
+        <button class="btn" id="btnJana">Jana laporan</button>
         <div id="msgLaporan"></div>
       </div>
       <div id="hasilLaporan"></div>
     </section>
-
-    <!-- MURID (admin) -->
-    <section id="tab-murid" hidden>
-      <div class="card">
-        <h2>Tambah murid baru</h2>
-        <div class="row">
-          <div><label for="mNo">No. Daftar</label><input id="mNo" maxlength="30" autocomplete="off"></div>
-          <div><label for="mKelas">Kelas</label><input id="mKelas" list="dlKelas" maxlength="50" placeholder="Pilih atau taip"></div>
-        </div>
-        <label for="mNama">Nama penuh</label>
-        <input id="mNama" maxlength="150" autocomplete="off">
-        <button id="btnTambahMurid" class="btn full" style="margin-top:12px">Tambah Murid</button>
-        <div id="msgMurid"></div>
-      </div>
-      <div class="card">
-        <h2>Tambah pukal (CSV)</h2>
-        <p class="muted" style="margin-top:0">Fail CSV dengan kolum <b>NoDaftar, Nama, Kelas</b>. Fail export APDM pun boleh.
-          Dari Excel: File &gt; Save As &gt; <b>CSV UTF-8</b>.</p>
-        <div class="row">
-          <input id="csvFail" type="file" accept=".csv,text/csv">
-          <button id="btnTemplate" class="btn sec sm" style="flex:0 0 auto">Template CSV</button>
-        </div>
-        <label style="display:flex;gap:8px;align-items:center;color:var(--ink)">
-          <input id="csvKemaskini" type="checkbox" style="width:18px;height:18px"> Kemas kini nama/kelas murid yang No. Daftar sudah wujud
-        </label>
-        <div id="csvPreview"></div>
-      </div>
-      <div class="card">
-        <h2>Senarai murid (<span id="bilMurid">0</span>)</h2>
-        <div class="row">
-          <div><select id="mfKelas"><option value="">Semua kelas</option></select></div>
-          <div><input id="mfCari" type="search" placeholder="Cari nama / no. daftar"></div>
-        </div>
-        <div class="scroll"><table class="tbl" id="tblMurid"></table></div>
-      </div>
-      <datalist id="dlKelas"></datalist>
-    </section>
   </main>
 </div>
 
-<dialog id="dlgMurid">
-  <h2 style="margin-top:0;font-size:16px">Edit murid</h2>
-  <p class="muted">No. Daftar: <b id="emNo"></b></p>
-  <label for="emNama">Nama</label>
-  <input id="emNama" maxlength="150">
-  <label for="emKelas">Kelas</label>
-  <input id="emKelas" list="dlKelas" maxlength="50">
-  <label for="emAktif">Status</label>
-  <select id="emAktif"><option value="YA">Aktif</option><option value="TIDAK">Tidak aktif (pindah / berhenti)</option></select>
-  <div class="row" style="margin-top:12px">
-    <button class="btn sec" id="emBatal">Batal</button>
-    <button class="btn" id="emSimpan">Simpan</button>
-  </div>
-</dialog>
-
-<dialog id="dlgEdit">
-  <h2 style="margin-top:0;font-size:16px">Edit rekod</h2>
-  <p id="edNama" class="muted"></p>
-  <label for="edSebab">Sebab</label>
-  <select id="edSebab"></select>
-  <label for="edCatatan">Catatan</label>
-  <textarea id="edCatatan" maxlength="200"></textarea>
-  <div class="row" style="margin-top:12px">
-    <button class="btn sec" id="edBatal">Batal</button>
-    <button class="btn" id="edSimpan">Simpan</button>
-  </div>
-</dialog>
+<div id="overlay" class="overlay" hidden><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+<div id="toast" class="toast" hidden></div>
 
 <script>
 // Token sesi disimpan dalam memori sahaja (bukan localStorage). Refresh halaman = log masuk semula.
-const S = { token: null, idleMs: 0, tamatMs: 0, akhir: 0, init: null, pilih: new Map(), hariIni: [], laporan: null, editId: null };
+const S = { token: null, idleMs: 0, tamatMs: 0, akhir: 0, offset: 0, init: null,
+  murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], laporan: null, csv: null, sheetRekod: null };
 const $ = id => document.getElementById(id);
+const TZ = 'Asia/Kuala_Lumpur';
+const HARI = { Sun: 'Ahad', Mon: 'Isnin', Tue: 'Selasa', Wed: 'Rabu', Thu: 'Khamis', Fri: 'Jumaat', Sat: 'Sabtu' };
+const BULAN = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+const LABEL_PERANAN = { PENGAWAS: 'Pengawas', GURU: 'Guru disiplin', ADMIN: 'Admin' };
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -276,18 +301,36 @@ function call(fn, ...args) {
 }
 function sesiTamat(e) { return String(e && e.message || e).includes('Sesi tamat'); }
 function msg(el, type, html) { el.innerHTML = html ? `<div class="msg ${type}">${html}</div>` : ''; }
-function fmtD(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
-function isoLocal(d) {
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+let tToast;
+function toast(text, bad) {
+  const t = $('toast');
+  t.textContent = text; t.className = 'toast' + (bad ? ' bad' : ''); t.hidden = false;
+  clearTimeout(tToast); tToast = setTimeout(() => { t.hidden = true; }, 4000);
 }
+function fmtD(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
 function options(sel, list, first) {
+  const v = sel.value;
   sel.innerHTML = (first != null ? `<option value="">${esc(first)}</option>` : '') +
-    list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    list.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
+  sel.value = list.includes(v) ? v : '';
+}
+
+// Jam ikut zon waktu Malaysia, diselaraskan dengan jam server (paparan sahaja)
+function jamKL() {
+  const p = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: 'numeric', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', weekday: 'short', hourCycle: 'h23' })
+    .formatToParts(new Date(Date.now() + S.offset)).forEach(x => { p[x.type] = x.value; });
+  const iso = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+  return { hm: `${p.hour}:${p.minute}`, s: p.second, minit: Number(p.hour) * 60 + Number(p.minute),
+    iso, tarikh: `${HARI[p.weekday]}, ${p.day} ${BULAN[p.month - 1]} ${p.year}` };
+}
+function lewatSekarang(j) {
+  const [h, m] = S.init.config.waktuLewat.split(':').map(Number);
+  return j.minit > h * 60 + m;
 }
 
 // ---------- Login & sesi ----------
-const LABEL_PERANAN = { PENGAWAS: 'Pengawas', GURU: 'Guru disiplin', ADMIN: 'Admin' };
-
 $('skrinLogin').addEventListener('submit', async e => {
   e.preventDefault();
   const el = $('msgLogin'), btn = $('btnLogin');
@@ -302,7 +345,6 @@ $('skrinLogin').addEventListener('submit', async e => {
     S.akhir = Date.now();
     $('lgPin').value = '';
     $('skrinLogin').hidden = true;
-    $('btnKeluar').hidden = false;
     if (r.perluTukarPin) { $('skrinTukarPin').hidden = false; $('tpLama').focus(); }
     else mula();
   } catch (err) {
@@ -334,16 +376,14 @@ $('btnKeluar').addEventListener('click', () => {
 
 // Kosongkan semua data dari skrin dan kembali ke login
 function keluarUI(pesan) {
-  S.token = null; S.init = null; S.hariIni = []; S.laporan = null; S.murid = null; S.csv = null;
-  S.pilih.clear();
-  ['senaraiKelas', 'hasilCari', 'tblHariIni', 'hasilLaporan', 'tblMurid', 'csvPreview',
-    'msgRekod', 'msgLaporan', 'msgMurid', 'msgTukarPin'].forEach(id => $(id).innerHTML = '');
-  ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'catatan'].forEach(id => $(id).value = '');
-  document.querySelectorAll('dialog[open]').forEach(d => d.close());
-  renderChips();
-  document.querySelector('nav button[data-tab="rekod"]').click();
-  $('app').hidden = true; $('skrinTukarPin').hidden = true; $('btnKeluar').hidden = true;
-  $('hUser').textContent = '';
+  Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], laporan: null, csv: null, sheetRekod: null });
+  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
+    .forEach(id => $(id).innerHTML = '');
+  ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'mNama', 'mKelas', 'pfCari'].forEach(id => $(id).value = '');
+  tutupSheet();
+  $('toast').hidden = true;
+  pilihTab('rekod');
+  $('app').hidden = true; $('skrinTukarPin').hidden = true; $('who').hidden = true;
   $('skrinLogin').hidden = false;
   msg($('msgLogin'), 'bad', pesan ? esc(pesan) : '');
 }
@@ -359,246 +399,264 @@ setInterval(() => {
 }, 10000);
 
 // ---------- Init ----------
-function mula() {
-call('getInit').then(d => {
-  S.init = d;
-  $('hSekolah').textContent = d.config.sekolah;
-  $('hUser').textContent = `${d.user.nama} · ${d.user.id} · ${LABEL_PERANAN[d.user.peranan] || d.user.peranan}`;
-  options($('sebab'), d.sebab, '-- Pilih sebab --');
-  options($('edSebab'), d.sebab);
-  options($('fSebab'), d.sebab, 'Semua');
-  $('fHad').value = d.config.hadKerap;
-  $('navLaporan').hidden = !['GURU', 'ADMIN'].includes(d.user.peranan);
-  $('navMurid').hidden = d.user.peranan !== 'ADMIN';
-  setKelas(d.kelas);
-  setTempoh('bulan');
-  $('app').hidden = false;
-  jam();
-  if (!S.jamTimer) S.jamTimer = setInterval(jam, 1000);
-}).catch(e => { if (!sesiTamat(e)) keluarUI(e.message); });
+async function mula() {
+  try {
+    const d = await call('getInit');
+    S.init = d;
+    S.offset = d.config.masaServer - Date.now();
+    $('whoNama').textContent = d.user.nama;
+    $('whoPeranan').textContent = LABEL_PERANAN[d.user.peranan] || d.user.peranan;
+    $('who').hidden = false;
+    $('navPelajar').hidden = d.user.peranan !== 'ADMIN';
+    $('navLaporan').hidden = !['GURU', 'ADMIN'].includes(d.user.peranan);
+    setKelas(d.kelas);
+    const j = jamKL();
+    $('lpDari').value = j.iso.slice(0, 8) + '01';
+    $('lpHingga').value = j.iso;
+    $('app').hidden = false;
+    pilihTab('rekod');
+    jam();
+    if (!S.jamTimer) S.jamTimer = setInterval(jam, 1000);
+    muatMurid();
+  } catch (e) { if (!sesiTamat(e)) keluarUI(e.message); }
+}
+
+function setKelas(list) {
+  S.init.kelas = list;
+  options($('lpKelas'), list, 'Semua kelas');
+  options($('pfKelas'), list, 'Semua kelas');
+  const nama = [...new Set(list.map(k => k.replace(/^\d+\s+/, '')))].sort();
+  $('dlKelas').innerHTML = nama.map(k => `<option value="${esc(k)}">`).join('');
 }
 
 // ---------- Tab ----------
-document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
-  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x === b));
-  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + b.dataset.tab);
+function pilihTab(tab) {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'tab-' + tab);
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll('#nav button').forEach(b => b.addEventListener('click', () => {
+  pilihTab(b.dataset.tab);
+  if (b.dataset.tab === 'rekod') muatMurid();
   if (b.dataset.tab === 'hariini') muatHariIni();
-  if (b.dataset.tab === 'murid') muatMurid();
+  if (b.dataset.tab === 'pelajar') muatPelajar();
 }));
 
-// ---------- Jam (paparan sahaja; masa sebenar diambil di server) ----------
+// ---------- Jam ----------
 function jam() {
   if (!S.init) return;
-  const d = new Date();
-  $('jam').textContent = d.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', hour12: false });
-  const [h, m] = S.init.config.waktuLewat.split(':').map(Number);
-  const lewat = d.getHours() * 60 + d.getMinutes() - (h * 60 + m);
-  const t = $('statusLewat');
-  t.textContent = lewat > 0 ? `Lewat ${lewat} minit` : `Belum lewat (had ${S.init.config.waktuLewat})`;
-  t.className = 'tag ' + (lewat > 0 ? 'warn' : '');
+  const j = jamKL();
+  $('jamHM').textContent = j.hm;
+  $('jamS').textContent = j.s;
+  $('jamTarikh').textContent = j.tarikh;
+  if (S.sheetRekod) kemaskiniWaktuSheet(j);
 }
 
-// ---------- Pilih murid ----------
-$('kelas').addEventListener('change', muatKelas);
-async function muatKelas() {
-  const k = $('kelas').value, box = $('senaraiKelas');
-  if (!k) { box.innerHTML = ''; return; }
-  box.innerHTML = '<p class="muted">Memuatkan...</p>';
+// ---------- Rekod ----------
+async function muatMurid() {
   try {
-    const list = await call('getMuridKelas', k);
-    box.innerHTML = list.length ? '<div class="list">' + list.map(m =>
-      `<label><input type="checkbox" data-no="${esc(m.noDaftar)}" data-nama="${esc(m.nama)}" data-kelas="${esc(m.kelas)}"
-        ${S.pilih.has(m.noDaftar) ? 'checked' : ''}> ${esc(m.nama)}</label>`).join('') + '</div>'
-      : '<p class="muted">Tiada murid dalam kelas ini.</p>';
-  } catch (e) { box.innerHTML = `<p class="msg bad">${esc(e.message)}</p>`; }
+    const r = await call('getMuridAktif');
+    S.murid = r.murid; S.hariIni = r.hariIni;
+    renderMurid();
+  } catch (e) { if (!sesiTamat(e)) $('senaraiMurid').innerHTML = `<div class="kosong">${esc(e.message)}</div>`; }
 }
-$('senaraiKelas').addEventListener('change', e => {
-  const c = e.target;
-  if (!c.dataset.no) return;
-  if (c.checked) S.pilih.set(c.dataset.no, { nama: c.dataset.nama, kelas: c.dataset.kelas });
-  else S.pilih.delete(c.dataset.no);
-  renderChips();
-});
 
-let tCari;
-$('cari').addEventListener('input', () => {
-  clearTimeout(tCari);
-  const q = $('cari').value.trim();
-  if (q.length < 3) { $('hasilCari').innerHTML = ''; return; }
-  tCari = setTimeout(async () => {
-    try {
-      const list = await call('cariMurid', q);
-      $('hasilCari').innerHTML = list.length ? '<div class="list">' + list.map(m =>
-        `<button data-no="${esc(m.noDaftar)}" data-nama="${esc(m.nama)}" data-kelas="${esc(m.kelas)}">
-          ${esc(m.nama)} <span class="muted">· ${esc(m.kelas)} · ${esc(m.noDaftar)}</span></button>`).join('') + '</div>'
-        : '<p class="muted">Tiada padanan.</p>';
-    } catch (e) { $('hasilCari').innerHTML = `<p class="msg bad">${esc(e.message)}</p>`; }
-  }, 400);
-});
-$('hasilCari').addEventListener('click', e => {
-  const b = e.target.closest('button[data-no]');
+function tagMasa(masa, lewat) {
+  return `<span class="tag ${lewat ? 'bad' : 'ok'}">${esc(masa)}</span>`;
+}
+
+function renderMurid() {
+  const q = $('cari').value.trim().toLowerCase();
+  const list = q ? S.murid.filter(m => m.nama.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)) : S.murid;
+  $('bilMurid').textContent = `${list.length} daripada ${S.murid.length}`;
+  const papar = list.slice(0, 60);
+  $('senaraiMurid').innerHTML = papar.length ? papar.map(m => {
+    const r = S.hariIni[m.id];
+    return `<button class="item" data-id="${esc(m.id)}"><span class="txt"><span class="nm">${esc(m.nama)}</span>
+      <span class="sub"> ${esc(m.kelas)} · ${esc(m.id)}</span></span>${r ? tagMasa(r.masa, r.lewat) : ''}</button>`;
+  }).join('') + (list.length > papar.length ? `<div class="kosong">Tunjuk ${papar.length} pertama. Taip nama untuk cari.</div>` : '')
+    : `<div class="kosong">${S.murid.length ? 'Tiada padanan.' : 'Tiada pelajar aktif.'}</div>`;
+}
+$('cari').addEventListener('input', renderMurid);
+
+$('senaraiMurid').addEventListener('click', e => {
+  const b = e.target.closest('button[data-id]');
   if (!b) return;
-  S.pilih.set(b.dataset.no, { nama: b.dataset.nama, kelas: b.dataset.kelas });
-  $('cari').value = ''; $('hasilCari').innerHTML = '';
-  renderChips(); syncCheckbox();
+  const m = S.murid.find(x => x.id === b.dataset.id);
+  if (m) bukaSheetRekod(m);
 });
 
-function renderChips() {
-  $('bilPilih').textContent = S.pilih.size;
-  $('chips').innerHTML = S.pilih.size ? [...S.pilih].map(([no, m]) =>
-    `<span class="chip">${esc(m.nama)} (${esc(m.kelas)}) <button data-buang="${esc(no)}" aria-label="Buang">×</button></span>`).join('')
-    : '<span class="muted">Belum ada murid dipilih.</span>';
-  $('btnSimpan').textContent = S.pilih.size ? `Simpan Rekod (${S.pilih.size} murid)` : 'Simpan Rekod';
+function bukaSheet(html) {
+  $('sheet').innerHTML = '<div class="handle"></div>' + html;
+  $('overlay').hidden = false;
 }
-$('chips').addEventListener('click', e => {
-  const no = e.target.dataset.buang;
-  if (!no) return;
-  S.pilih.delete(no); renderChips(); syncCheckbox();
+function tutupSheet() { $('overlay').hidden = true; $('sheet').innerHTML = ''; S.sheetRekod = null; }
+$('overlay').addEventListener('click', e => { if (e.target === $('overlay')) tutupSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('overlay').hidden) tutupSheet(); });
+
+function bukaSheetRekod(m) {
+  const sudah = S.hariIni[m.id];
+  if (sudah) {
+    bukaSheet(`<h3>${esc(m.nama)}</h3><div class="muted">${esc(m.kelas)} · ${esc(m.id)}</div>
+      <div class="msg warn">Sudah direkod hari ini pada ${esc(sudah.masa)}. Murid tidak boleh direkod dua kali pada hari yang sama.</div>
+      <button class="btn sec" data-tutup>Tutup</button>`);
+    return;
+  }
+  S.sheetRekod = { m, sebab: '' };
+  bukaSheet(`<h3>${esc(m.nama)}</h3><div class="muted">${esc(m.kelas)} · ${esc(m.id)}</div>
+    <div class="waktu" id="shWaktu"><span id="shLabel">Waktu tiba</span><b id="shMasa">--:--</b></div>
+    <div class="muted">Sebab lewat, jika ada</div>
+    <div class="chips" id="shChips">${S.init.sebab.map(s => `<button class="chip" data-sebab="${esc(s)}">${esc(s)}</button>`).join('')}</div>
+    <button class="btn" id="shRekod">Rekod</button>
+    <button class="btn sec" data-tutup>Batal</button>
+    <div id="shMsg"></div>`);
+  kemaskiniWaktuSheet(jamKL());
+}
+
+function kemaskiniWaktuSheet(j) {
+  const lewat = lewatSekarang(j);
+  $('shWaktu').className = 'waktu' + (lewat ? '' : ' ok');
+  $('shLabel').textContent = lewat ? 'Waktu tiba' : `Waktu tiba · belum lewat (had ${S.init.config.waktuLewat})`;
+  $('shMasa').textContent = j.hm;
+  const btn = $('shRekod');
+  if (!btn.disabled) btn.textContent = `Rekod jam ${j.hm}`;
+}
+
+$('sheet').addEventListener('click', async e => {
+  if (e.target.closest('[data-tutup]')) return tutupSheet();
+  const chip = e.target.closest('[data-sebab]');
+  if (chip && S.sheetRekod) {
+    const on = !chip.classList.contains('on');
+    document.querySelectorAll('#shChips .chip').forEach(c => c.classList.remove('on'));
+    chip.classList.toggle('on', on);
+    S.sheetRekod.sebab = on ? chip.dataset.sebab : '';
+    return;
+  }
+  if (e.target.id === 'shRekod') return uiSimpanRekod();
+  if (e.target.id === 'shBatalRekod') return uiBatalRekod();
 });
-function syncCheckbox() {
-  document.querySelectorAll('#senaraiKelas input[data-no]').forEach(c => c.checked = S.pilih.has(c.dataset.no));
-}
 
-$('sebab').addEventListener('change', () => { $('catatanBox').hidden = !$('sebab').value; });
-
-// ---------- Simpan ----------
-$('btnSimpan').addEventListener('click', () => simpan(false));
-async function simpan(sahkan) {
-  const el = $('msgRekod');
-  const sebab = $('sebab').value, catatan = $('catatan').value.trim();
-  if (!S.pilih.size) return msg(el, 'bad', 'Pilih sekurang-kurangnya seorang murid.');
-  if (!sebab) return msg(el, 'bad', 'Pilih sebab kelewatan.');
-  if (sebab === S.init.sebabLain && !catatan) return msg(el, 'bad', 'Sila isi catatan untuk Lain-lain.');
-
-  const btn = $('btnSimpan');
-  btn.disabled = true; msg(el, '', '');
+async function uiSimpanRekod() {
+  const { m, sebab } = S.sheetRekod, btn = $('shRekod');
+  btn.disabled = true; btn.textContent = 'Menyimpan...';
   try {
-    const r = await call('simpanRekod', { noDaftar: [...S.pilih.keys()], sebab, catatan, sahkan });
-    if (r.perluSahkan) {
-      btn.disabled = false;
-      if (confirm(r.amaran.join('\n\n') + '\n\nTeruskan simpan?')) return await simpan(true);
-      return;
-    }
-    msg(el, 'ok', `Disimpan: ${r.disimpan.length} murid · lewat ${r.minitLewat} minit<ul>` +
-      r.disimpan.map(m => `<li>${esc(m.nama)} (${esc(m.kelas)}) — kali ke-${m.kaliBulanIni} bulan ini
-        ${m.kerap ? '<span class="tag bad">KERAP</span>' : ''}</li>`).join('') + '</ul>');
-    S.pilih.clear(); renderChips(); syncCheckbox();
-    $('sebab').value = ''; $('catatan').value = ''; $('catatanBox').hidden = true;
-  } catch (e) {
-    msg(el, 'bad', esc(e.message));
-  } finally {
+    const r = await call('simpanRekod', m.id, sebab);
+    S.hariIni[m.id] = { masa: r.masa, lewat: r.lewat };
+    tutupSheet();
+    $('cari').value = '';
+    renderMurid();
+    toast(r.lewat
+      ? `${r.nama} direkod ${r.masa} · lewat kali ke-${r.kaliBulanIni} bulan ini` + (r.kaliBulanIni >= r.hadTindakan ? ' (capai had tindakan)' : '')
+      : `${r.nama} direkod ${r.masa} · tidak lewat`);
+  } catch (err) {
+    if (sesiTamat(err)) return;
     btn.disabled = false;
+    msg($('shMsg'), 'bad', esc(err.message));
+    if (err.message.includes('sudah direkod')) muatMurid();
   }
 }
 
 // ---------- Hari ini ----------
 $('btnMuatHariIni').addEventListener('click', muatHariIni);
 async function muatHariIni() {
-  const tbl = $('tblHariIni');
-  tbl.innerHTML = '<tr><td class="muted">Memuatkan...</td></tr>';
+  const box = $('senaraiHariIni');
+  if (!S.rekodHariIni.length) box.innerHTML = '<div class="kosong">Memuatkan...</div>';
   try {
-    const r = await call('getRekodHariIni');
-    S.hariIni = r.list;
-    $('bilHariIni').textContent = r.list.length;
-    if (!r.list.length) { tbl.innerHTML = '<tr><td class="muted">Tiada rekod lagi hari ini.</td></tr>'; return; }
-    tbl.innerHTML = '<tr><th>Masa</th><th>Nama</th><th>Kelas</th><th>Sebab</th>' + (r.bolehUbah ? '<th></th>' : '') + '</tr>' +
-      r.list.map(x => `<tr><td>${esc(x.masa.slice(0, 5))}<br><span class="muted">${x.minit} min</span></td>
-        <td>${esc(x.nama)}</td><td>${esc(x.kelas)}</td>
-        <td>${esc(x.sebab)}${x.catatan ? `<br><span class="muted">${esc(x.catatan)}</span>` : ''}</td>
-        ${r.bolehUbah ? `<td style="white-space:nowrap"><button class="btn sec sm" data-edit="${esc(x.id)}">Edit</button>
-          <button class="btn bad sm" data-padam="${esc(x.id)}">Padam</button></td>` : ''}</tr>`).join('');
-  } catch (e) { tbl.innerHTML = `<tr><td class="msg bad">${esc(e.message)}</td></tr>`; }
+    S.rekodHariIni = await call('getRekodHariIni');
+    const n = S.rekodHariIni.length;
+    $('bilHariIni').textContent = `${n} rekod`;
+    box.innerHTML = n ? S.rekodHariIni.map(r => `<button class="item" data-rekod="${esc(r.id)}">
+      <span class="txt"><span class="nm">${esc(r.nama)}</span><span class="sub"> ${esc(r.kelas)}${r.sebab ? ' · ' + esc(r.sebab) : ''}${r.lewat ? '' : ' · tidak lewat'}</span></span>
+      ${tagMasa(r.masa, r.lewat)}</button>`).join('')
+      : '<div class="kosong">Tiada rekod lagi hari ini.</div>';
+  } catch (e) { if (!sesiTamat(e)) box.innerHTML = `<div class="kosong">${esc(e.message)}</div>`; }
 }
-$('tblHariIni').addEventListener('click', async e => {
-  const id = e.target.dataset.edit || e.target.dataset.padam;
-  if (!id) return;
-  const x = S.hariIni.find(r => r.id === id);
-  if (e.target.dataset.edit) {
-    S.editId = id;
-    $('edNama').textContent = `${x.nama} (${x.kelas})`;
-    $('edSebab').value = x.sebab; $('edCatatan').value = x.catatan;
-    $('dlgEdit').showModal();
-  } else if (confirm(`Padam rekod ${x.nama}?`)) {
-    try { await call('padamRekod', id); muatHariIni(); } catch (err) { alert(err.message); }
-  }
-});
-$('edBatal').addEventListener('click', () => $('dlgEdit').close());
-$('edSimpan').addEventListener('click', async () => {
-  try {
-    await call('kemaskiniRekod', S.editId, $('edSebab').value, $('edCatatan').value.trim());
-    $('dlgEdit').close(); muatHariIni();
-  } catch (e) { alert(e.message); }
+
+$('senaraiHariIni').addEventListener('click', e => {
+  const b = e.target.closest('[data-rekod]');
+  if (!b) return;
+  const r = S.rekodHariIni.find(x => x.id === b.dataset.rekod);
+  if (!r) return;
+  if (!r.bolehBatal) return toast('Anda hanya boleh membatalkan rekod sendiri pada hari yang sama.', true);
+  S.sheetBatal = r;
+  bukaSheet(`<h3>Batalkan rekod?</h3><div class="muted">${esc(r.nama)} · ${esc(r.kelas)} · direkod ${esc(r.masa)} oleh ${esc(r.oleh)}</div>
+    ${r.perluCatatan ? '<label class="f" for="shCatatan">Catatan sebab pembatalan (wajib)</label><textarea id="shCatatan" maxlength="200"></textarea>' : ''}
+    <p class="muted">Rekod tidak dipadam. Ia ditanda dibatalkan dan tidak dikira dalam laporan.</p>
+    <button class="btn danger" id="shBatalRekod">Batalkan rekod</button>
+    <button class="btn sec" data-tutup>Tutup</button>
+    <div id="shMsg"></div>`);
 });
 
-// ---------- Urus murid ----------
-function setKelas(list) {
-  const pilih = $('kelas').value;
-  options($('kelas'), list, '-- Pilih kelas --'); $('kelas').value = pilih;
-  options($('fKelas'), list, 'Semua');
-  const mf = $('mfKelas').value;
-  options($('mfKelas'), list, 'Semua kelas'); $('mfKelas').value = mf;
-  $('dlKelas').innerHTML = list.map(k => `<option value="${esc(k)}">`).join('');
+async function uiBatalRekod() {
+  const r = S.sheetBatal, btn = $('shBatalRekod');
+  const catatan = $('shCatatan') ? $('shCatatan').value.trim() : '';
+  if (r.perluCatatan && !catatan) return msg($('shMsg'), 'bad', 'Sila isi catatan.');
+  btn.disabled = true;
+  try {
+    await call('batalRekod', r.id, catatan);
+    delete S.hariIni[r.idMurid];
+    tutupSheet();
+    toast(`Rekod ${r.nama} dibatalkan.`);
+    muatHariIni();
+  } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
 }
 
-async function muatMurid() {
-  $('tblMurid').innerHTML = '<tr><td class="muted">Memuatkan...</td></tr>';
-  try { S.murid = await call('getSenaraiMurid'); renderMurid(); }
-  catch (e) { $('tblMurid').innerHTML = `<tr><td class="msg bad">${esc(e.message)}</td></tr>`; }
+// ---------- Pelajar (admin) ----------
+async function muatPelajar() {
+  if (!S.pelajar.length) $('senaraiPelajar').innerHTML = '<div class="kosong">Memuatkan...</div>';
+  try { S.pelajar = await call('getSenaraiMurid'); renderPelajar(); }
+  catch (e) { if (!sesiTamat(e)) $('senaraiPelajar').innerHTML = `<div class="kosong">${esc(e.message)}</div>`; }
 }
-function renderMurid() {
-  const k = $('mfKelas').value, q = $('mfCari').value.trim().toLowerCase();
-  const list = (S.murid || []).filter(m => (!k || m.kelas === k) &&
-    (!q || m.nama.toLowerCase().includes(q) || m.noDaftar.toLowerCase().includes(q)));
-  $('bilMurid').textContent = list.length;
-  $('tblMurid').innerHTML = list.length ? '<tr><th>No. Daftar</th><th>Nama</th><th>Kelas</th><th></th></tr>' +
-    list.slice(0, 300).map(m => `<tr${m.aktif ? '' : ' style="opacity:.55"'}><td>${esc(m.noDaftar)}</td>
-      <td>${esc(m.nama)}${m.aktif ? '' : ' <span class="tag">Tidak aktif</span>'}</td><td>${esc(m.kelas)}</td>
-      <td><button class="btn sec sm" data-murid="${esc(m.noDaftar)}">Edit</button></td></tr>`).join('') +
-    (list.length > 300 ? '<tr><td colspan="4" class="muted">Tunjuk 300 pertama. Guna tapisan untuk kecilkan senarai.</td></tr>' : '')
-    : '<tr><td class="muted">Tiada murid.</td></tr>';
-}
-$('mfKelas').addEventListener('change', renderMurid);
-$('mfCari').addEventListener('input', renderMurid);
 
-$('btnTambahMurid').addEventListener('click', async () => {
+function renderPelajar() {
+  const k = $('pfKelas').value, q = $('pfCari').value.trim().toLowerCase();
+  const list = S.pelajar.filter(m => (!k || m.label === k) && (!q || m.nama.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)));
+  $('bilPelajar').textContent = `${list.length} pelajar`;
+  const papar = list.slice(0, 200);
+  $('senaraiPelajar').innerHTML = papar.length ? papar.map(m => `<div class="item${m.aktif ? '' : ' mati'}">
+      <span class="txt"><span class="nm">${esc(m.nama)}</span><span class="sub"> ${esc(m.label)} · ${esc(m.id)}</span></span>
+      <button class="tag ${m.aktif ? 'ok' : ''}" data-status="${esc(m.id)}">${m.aktif ? 'Aktif' : 'Tidak aktif'}</button></div>`).join('') +
+    (list.length > papar.length ? `<div class="kosong">Tunjuk ${papar.length} pertama. Guna carian atau tapis kelas.</div>` : '')
+    : '<div class="kosong">Tiada pelajar.</div>';
+}
+$('pfKelas').addEventListener('change', renderPelajar);
+$('pfCari').addEventListener('input', renderPelajar);
+
+$('senaraiPelajar').addEventListener('click', async e => {
+  const b = e.target.closest('[data-status]');
+  if (!b) return;
+  const m = S.pelajar.find(x => x.id === b.dataset.status);
+  const jadi = !m.aktif;
+  if (!confirm(`Tukar status ${m.nama} kepada ${jadi ? 'aktif' : 'tidak aktif'}?`)) return;
+  b.disabled = true;
+  try {
+    const r = await call('tukarStatusMurid', m.id, jadi);
+    m.aktif = jadi; setKelas(r.senaraiKelas); renderPelajar();
+  } catch (err) { if (!sesiTamat(err)) { b.disabled = false; toast(err.message, true); } }
+});
+
+$('formMurid').addEventListener('submit', async e => {
+  e.preventDefault();
   const el = $('msgMurid'), btn = $('btnTambahMurid');
-  const m = { noDaftar: $('mNo').value.trim(), nama: $('mNama').value.trim(), kelas: $('mKelas').value.trim() };
-  if (!m.noDaftar || !m.nama || !m.kelas) return msg(el, 'bad', 'Isi No. Daftar, Nama dan Kelas.');
+  const m = { nama: $('mNama').value.trim(), tingkatan: $('mTing').value, kelas: $('mKelas').value.trim() };
+  if (!m.nama || !m.tingkatan || !m.kelas) return msg(el, 'bad', 'Isi nama, tingkatan dan kelas.');
   btn.disabled = true; msg(el, '', '');
   try {
-    const r = await call('simpanMurid', m, true);
-    setKelas(r.kelas);
-    msg(el, 'ok', `${esc(m.nama.toUpperCase())} ditambah ke ${esc(m.kelas)}.`);
-    $('mNo').value = ''; $('mNama').value = '';
-    muatMurid();
-  } catch (e) { msg(el, 'bad', esc(e.message)); }
+    const r = await call('tambahMurid', m);
+    setKelas(r.senaraiKelas);
+    msg(el, 'ok', `${esc(r.nama)} ditambah ke ${esc(r.kelas)} dengan ID ${esc(r.id)}.`);
+    $('mNama').value = '';
+    muatPelajar();
+  } catch (err) { if (!sesiTamat(err)) msg(el, 'bad', esc(err.message)); }
   finally { btn.disabled = false; }
 });
 
-$('tblMurid').addEventListener('click', e => {
-  const no = e.target.dataset.murid;
-  if (!no) return;
-  const m = S.murid.find(x => x.noDaftar === no);
-  $('emNo').textContent = m.noDaftar; $('emNama').value = m.nama; $('emKelas').value = m.kelas;
-  $('emAktif').value = m.aktif ? 'YA' : 'TIDAK';
-  $('dlgMurid').showModal();
-});
-$('emBatal').addEventListener('click', () => $('dlgMurid').close());
-$('emSimpan').addEventListener('click', async () => {
-  try {
-    const r = await call('simpanMurid', { noDaftar: $('emNo').textContent, nama: $('emNama').value,
-      kelas: $('emKelas').value, aktif: $('emAktif').value === 'YA' }, false);
-    setKelas(r.kelas); $('dlgMurid').close(); muatMurid();
-    if ($('kelas').value) muatKelas();
-  } catch (e) { alert(e.message); }
-});
-
-// ---------- Import pukal CSV ----------
+// ---------- Import CSV ----------
 function parseCsv(text) {
   text = text.replace(/^﻿/, '');
   const first = text.split(/\r?\n/)[0] || '';
   const cnt = c => first.split(c).length;
-  const d = cnt('\t') > cnt(',') && cnt('\t') > cnt(';') ? '\t' : cnt(';') > cnt(',') ? ';' : ',';
+  const d = cnt(';') > cnt(',') ? ';' : ',';
   const rows = []; let row = [], f = '', q = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -617,125 +675,106 @@ function parseCsv(text) {
   return rows.filter(r => r.some(v => v.trim()));
 }
 
-$('btnTemplate').addEventListener('click', () => {
-  const t = '﻿NoDaftar,Nama,Kelas\r\n12345,CONTOH NAMA MURID,1 Amanah\r\n';
-  const url = URL.createObjectURL(new Blob([t], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a'); a.href = url; a.download = 'template-murid.csv';
+function muatTurun(nama, teks) {
+  const url = URL.createObjectURL(new Blob(['﻿' + teks], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = nama;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-});
+}
+
+$('btnTemplate').addEventListener('click', () => muatTurun('template-pelajar.csv', 'Nama,Tingkatan,Kelas\r\nContoh Nama Pelajar,1,Amanah\r\n'));
+$('btnPilihCsv').addEventListener('click', () => $('csvFail').click());
 
 $('csvFail').addEventListener('change', () => {
-  const f = $('csvFail').files[0], box = $('csvPreview');
+  const f = $('csvFail').files[0], box = $('csvHasil');
   S.csv = null; box.innerHTML = '';
   if (!f) return;
   if (f.size > 2 * 1024 * 1024) return msg(box, 'bad', 'Fail terlalu besar (maks 2 MB).');
   const rd = new FileReader();
-  rd.onload = () => {
+  rd.onload = async () => {
+    $('csvFail').value = '';
     const rows = parseCsv(String(rd.result));
     if (rows.length < 2) return msg(box, 'bad', 'Tiada data dijumpai dalam fail.');
-    S.csv = rows;
-    box.innerHTML = `<p class="muted">${rows.length - 1} baris dijumpai. Contoh 5 baris pertama:</p>` +
-      jadual(rows[0], rows.slice(1, 6)) +
-      `<button id="btnImport" class="btn full" style="margin-top:10px">Import ${rows.length - 1} murid</button><div id="msgImport"></div>`;
-    $('btnImport').addEventListener('click', importCsv);
+    msg(box, 'warn', `Menyemak ${rows.length - 1} baris...`);
+    try {
+      const r = await call('semakImportMurid', rows);
+      if (r.ralat.length) {
+        return msg(box, 'bad', `<b>${r.ralat.length} ralat. Tiada apa disimpan.</b> Betulkan fail dan pilih semula.<ul>` +
+          r.ralat.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' +
+          (r.ralat.length > 30 ? `...dan ${r.ralat.length - 30} lagi.` : ''));
+      }
+      S.csv = rows;
+      box.innerHTML = `<div class="ringkas">
+          <div><b>${r.baru}</b>Pelajar baharu</div><div><b>${r.kekal}</b>Kekal</div>
+          <div><b>${r.aktifSemula}</b>Aktif semula</div><div><b>${r.tidakAktif}</b>Jadi tidak aktif</div></div>
+        ${r.tidakAktif ? `<p class="muted">Akan jadi tidak aktif: ${r.contohTidakAktif.map(esc).join(', ')}${r.tidakAktif > 10 ? ', ...' : ''}</p>` : ''}
+        ${r.amaran ? `<div class="msg warn">${esc(r.amaran)}</div>` : ''}
+        <button class="btn" id="btnSimpanImport">Simpan import</button>
+        <p class="muted">Tab Murid akan dibackup ke tab baharu bertarikh sebelum disimpan.</p>`;
+    } catch (e) { if (!sesiTamat(e)) msg(box, 'bad', esc(e.message)); }
   };
   rd.readAsText(f, 'utf-8');
 });
 
-async function importCsv() {
-  const btn = $('btnImport'), el = $('msgImport');
-  btn.disabled = true; msg(el, '', '<span class="muted">Mengimport...</span>');
+$('csvHasil').addEventListener('click', async e => {
+  if (e.target.id !== 'btnSimpanImport' || !S.csv) return;
+  e.target.disabled = true; e.target.textContent = 'Menyimpan...';
   try {
-    const r = await call('importMuridCsv', S.csv, $('csvKemaskini').checked);
-    setKelas(r.kelas);
-    const ralat = r.ralat.length ? `<ul>${r.ralat.slice(0, 30).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` +
-      (r.ralat.length > 30 ? `<p>...dan ${r.ralat.length - 30} lagi.</p>` : '') : '';
-    msg(el, r.ralat.length ? 'bad' : 'ok', `Ditambah: <b>${r.tambah}</b> · Dikemas kini: <b>${r.kemaskini}</b> · ` +
-      `Dilangkau (sudah wujud): <b>${r.langkau}</b> · Ralat: <b>${r.ralat.length}</b>${ralat}`);
-    $('csvFail').value = '';
-    muatMurid();
-  } catch (e) { msg(el, 'bad', esc(e.message)); btn.disabled = false; }
-}
+    const r = await call('simpanImportMurid', S.csv);
+    S.csv = null;
+    setKelas(r.senaraiKelas);
+    msg($('csvHasil'), 'ok', `Import selesai. Baharu ${r.baru}, kekal ${r.kekal}, aktif semula ${r.aktifSemula}, tidak aktif ${r.tidakAktif}. Backup: ${esc(r.backup)}`);
+    muatPelajar();
+  } catch (err) { if (!sesiTamat(err)) msg($('csvHasil'), 'bad', esc(err.message)); }
+});
 
 // ---------- Laporan ----------
-function setTempoh(q) {
-  const t = new Date(); let a = new Date(t), b = new Date(t);
-  if (q === 'minggu') { const dow = (t.getDay() + 6) % 7; a.setDate(t.getDate() - dow); }
-  if (q === 'bulan') a = new Date(t.getFullYear(), t.getMonth(), 1);
-  if (q === 'bulanLepas') { a = new Date(t.getFullYear(), t.getMonth() - 1, 1); b = new Date(t.getFullYear(), t.getMonth(), 0); }
-  $('dari').value = isoLocal(a); $('hingga').value = isoLocal(b);
-}
-document.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => setTempoh(b.dataset.q)));
-
 $('btnJana').addEventListener('click', async () => {
   const el = $('msgLaporan'), btn = $('btnJana');
-  btn.disabled = true; msg(el, '', ''); $('hasilLaporan').innerHTML = '<p class="muted">Menjana...</p>';
+  btn.disabled = true; msg(el, '', '');
   try {
-    S.laporan = await call('getLaporan', {
-      dari: $('dari').value, hingga: $('hingga').value,
-      kelas: $('fKelas').value, sebab: $('fSebab').value, had: $('fHad').value
-    });
+    S.laporan = await call('getLaporan', { dari: $('lpDari').value, hingga: $('lpHingga').value, kelas: $('lpKelas').value });
     renderLaporan();
-  } catch (e) { $('hasilLaporan').innerHTML = ''; msg(el, 'bad', esc(e.message)); }
+  } catch (e) { if (!sesiTamat(e)) { $('hasilLaporan').innerHTML = ''; msg(el, 'bad', esc(e.message)); } }
   finally { btn.disabled = false; }
 });
 
-function jadual(head, rows) {
-  if (!rows.length) return '<p class="muted">Tiada data.</p>';
-  return '<div class="scroll"><table class="tbl"><tr>' + head.map(h => `<th>${esc(h)}</th>`).join('') + '</tr>' +
-    rows.map(r => '<tr>' + r.map(c => `<td>${esc(c)}</td>`).join('') + '</tr>').join('') + '</table></div>';
+function senaraiKira(list, kosong) {
+  return `<div class="list">${list.length ? list.map(m => `<div class="item"><span class="txt"><span class="nm">${esc(m.nama)}</span>
+    <span class="sub"> ${esc(m.kelas)}</span></span><span class="tag bad">${m.n} kali</span></div>`).join('')
+    : `<div class="kosong">${kosong}</div>`}</div>`;
 }
 
 function renderLaporan() {
-  const r = S.laporan, c = S.init.config, rk = r.ringkasan;
-  const tapis = [$('fKelas').value && 'Kelas: ' + $('fKelas').value, $('fSebab').value && 'Sebab: ' + $('fSebab').value].filter(Boolean).join(' · ');
-  const pct = n => rk.jumlah ? Math.round(n / rk.jumlah * 100) + '%' : '0%';
+  const r = S.laporan;
+  const [y, mo] = r.bulan.split('-');
   $('hasilLaporan').innerHTML = `
-    <div class="print-only" style="text-align:center;margin-bottom:12px">
-      ${c.logo ? `<img src="${esc(c.logo)}" alt="" style="height:60px">` : ''}
-      <h2 style="margin:4px 0">${esc(c.sekolah)} (${esc(c.kod)})</h2>
-      <div>Laporan Kelewatan Murid</div>
-      <div>Tempoh: ${fmtD(r.dari)} hingga ${fmtD(r.hingga)}${tapis ? ' · ' + esc(tapis) : ''}</div>
-      <div class="muted">Dijana: ${esc(new Date().toLocaleString('ms-MY'))}</div>
+    <div class="stats">
+      <div class="card"><b>${r.jumlah}</b><span class="muted">Kes kelewatan</span></div>
+      <div class="card"><b>${r.pelajar}</b><span class="muted">Pelajar terlibat</span></div>
     </div>
-    <div class="card no-print row">
-      <button class="btn sec" id="btnCetak">Cetak / PDF</button>
-      <button class="btn sec" id="btnCsv">Download CSV</button>
-    </div>
-    <div class="card"><h2>Ringkasan · ${fmtD(r.dari)} hingga ${fmtD(r.hingga)}</h2><div class="stat">
-      <div><span class="muted">Jumlah rekod</span><b>${rk.jumlah}</b></div>
-      <div><span class="muted">Murid berbeza</span><b>${rk.murid}</b></div>
-      <div><span class="muted">Purata lewat</span><b>${rk.purataMinit} min</b></div>
-      <div><span class="muted">Hari paling ramai</span><b>${rk.hariPuncak ? fmtD(rk.hariPuncak.k) : '-'}</b>
-        ${rk.hariPuncak ? `<span class="muted">${rk.hariPuncak.n} rekod</span>` : ''}</div>
-    </div></div>
-    <div class="card"><h2>Murid kerap lewat (≥ ${r.had} kali)</h2>
-      ${jadual(['Nama', 'Kelas', 'Bil. lewat', 'Jumlah minit'], r.kerap.map(m => [m.nama, m.kelas, m.n, m.minit]))}</div>
-    <div class="card"><h2>Ikut kelas</h2>${jadual(['Kelas', 'Bil.', '%'], r.ikutKelas.map(x => [x.k, x.n, pct(x.n)]))}</div>
-    <div class="card"><h2>Ikut sebab</h2>${jadual(['Sebab', 'Bil.', '%'], r.ikutSebab.map(x => [x.k, x.n, pct(x.n)]))}</div>
-    <div class="card"><h2>Senarai penuh (${r.list.length})</h2>
-      ${jadual(['Tarikh', 'Masa', 'Min', 'Nama', 'Kelas', 'Sebab', 'Catatan'],
-        r.list.map(x => [fmtD(x.tarikh), x.masa.slice(0, 5), x.minit, x.nama, x.kelas, x.sebab, x.catatan]))}</div>`;
-  $('btnCetak').addEventListener('click', () => window.print());
-  $('btnCsv').addEventListener('click', downloadCsv);
+    <div class="sechead"><h2>Paling kerap lewat</h2><span class="muted">${fmtD(r.dari)} – ${fmtD(r.hingga)}</span></div>
+    ${senaraiKira(r.kerap, 'Tiada kes kelewatan dalam tempoh ini.')}
+    <div class="sechead"><h2>Capai had tindakan</h2><span class="muted">${BULAN[mo - 1]} ${y} · ${r.had} kali atau lebih</span></div>
+    ${senaraiKira(r.melepasiHad, 'Tiada pelajar mencapai had bulan ini.')}
+    <button class="btn sec" id="btnCsv" ${r.list.length ? '' : 'disabled'}>Eksport CSV</button>`;
 }
 
-function downloadCsv() {
+$('hasilLaporan').addEventListener('click', e => {
+  if (e.target.id !== 'btnCsv') return;
   const r = S.laporan;
-  const rows = [['Tarikh', 'Masa', 'Minit Lewat', 'No Daftar', 'Nama', 'Kelas', 'Sebab', 'Catatan', 'Direkod Oleh']]
-    .concat(r.list.map(x => [fmtD(x.tarikh), x.masa, x.minit, x.noDaftar, x.nama, x.kelas, x.sebab, x.catatan, x.oleh]));
-  const text = rows.map(row => row.map(v => {
+  const rows = [['Tarikh', 'Masa', 'ID Murid', 'Nama', 'Kelas', 'Sebab', 'Status', 'Direkod Oleh']]
+    .concat(r.list.map(x => [fmtD(x.tarikh), x.masa, x.idMurid, x.nama, x.kelas, x.sebab, x.status, x.oleh]));
+  // Elak formula injection bila fail dibuka dalam Excel
+  const teks = rows.map(row => row.map(v => {
     let s = String(v == null ? '' : v);
-    if (/^[=+\-@]/.test(s)) s = "'" + s;
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
   }).join(',')).join('\r\n');
-  const url = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url; a.download = `laporan-lewat_${r.dari}_${r.hingga}.csv`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
+  muatTurun(`laporan-lewat_${r.dari}_${r.hingga}.csv`, teks);
+});
+
+// ---------- Mula ----------
 // Tiada data dimuat sebelum login berjaya
 function tunjukLogin() {
   $('loading').remove();

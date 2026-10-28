@@ -1,5 +1,5 @@
 /**
- * SMART LATE RECORD — backend Google Apps Script
+ * SEMARAK TEPAT — sistem rekod kelewatan murid (backend Google Apps Script)
  * Script ini mesti dibuka dari Google Sheet (Extensions > Apps Script).
  *
  * Nota keselamatan:
@@ -13,30 +13,20 @@
 
 const CONFIG = {
   NAMA_SEKOLAH: 'NAMA SEKOLAH ANDA',
-  KOD_SEKOLAH: 'KOD SEKOLAH',
-  LOGO_URL: '',              // pilihan: URL imej logo (kosongkan kalau tiada)
   ZON_WAKTU: 'Asia/Kuala_Lumpur',
   MAKS_HARI_LAPORAN: 366,
+  MAKS_IMPORT: 3000,
   SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 30 }, // tamat jika tiada aktiviti
   HAD_CUBAAN: 5,             // PIN salah berturut-turut sebelum akaun dikunci
   KUNCI_MINIT: 15,
-  ITERASI_HASH: 1000,        // SHA-256 diulang supaya PIN 6 digit lebih sukar diteka jika Sheet bocor
-  // Nama header dalam fail APDM yang diterima (huruf besar/kecil tak penting).
-  // Tambah nama lain kalau header fail APDM sekolah berbeza.
-  APDM_HEADER: {
-    noDaftar: ['NODAFTAR', 'NO. DAFTAR', 'NO DAFTAR', 'NO. PENDAFTARAN', 'NO PENDAFTARAN', 'ID MURID', 'NO. MURID'],
-    nama: ['NAMA', 'NAMA MURID'],
-    kelas: ['KELAS', 'NAMA KELAS']
-  }
+  ITERASI_HASH: 1000         // SHA-256 diulang supaya PIN 6 digit lebih sukar diteka jika Sheet bocor
 };
 
-const TAB = {
-  MURID: 'MURID', REKOD: 'REKOD', IMPORT: 'IMPORT_APDM',
-  PENGGUNA: 'Pengguna', TETAPAN: 'Tetapan', LOG: 'LogAudit'
-};
+const TAB = { MURID: 'Murid', REKOD: 'Rekod', PENGGUNA: 'Pengguna', TETAPAN: 'Tetapan', LOG: 'LogAudit' };
 const HEADERS = {
-  MURID: ['NoDaftar', 'Nama', 'Kelas', 'Aktif'],
-  REKOD: ['ID', 'Timestamp', 'Tarikh', 'Masa', 'MinitLewat', 'NoDaftar', 'Nama', 'Kelas', 'Sebab', 'Catatan', 'DirekodOleh'],
+  Murid: ['ID_Murid', 'Nama', 'Tingkatan', 'Kelas', 'Status'],
+  Rekod: ['ID_Rekod', 'Tarikh', 'Masa_Tiba', 'ID_Murid', 'Kelas', 'ID_Pengguna', 'Sebab', 'Lewat', 'Status',
+    'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal'],
   Pengguna: ['ID_Pengguna', 'Nama', 'Peranan', 'Hash_PIN', 'Salt', 'Perlu_Tukar_PIN', 'Dikunci_Hingga', 'Status', 'Cubaan_Gagal'],
   Tetapan: ['Kunci', 'Nilai', 'Keterangan'],
   LogAudit: ['Masa', 'ID_Pengguna', 'Tindakan', 'Butiran']
@@ -49,20 +39,17 @@ const TETAPAN_LALAI = [
   ['sebab_lewat', 'Masalah kenderaan, Bangun lewat, Hujan lebat, Urusan keluarga, Lain-lain', 'Pilihan sebab, dipisahkan dengan koma']
 ];
 const PERANAN = { PENGAWAS: 'PGW', GURU: 'GRU', ADMIN: 'ADM' }; // peranan -> awalan ID
-const SEBAB_LAIN = 'Lain-lain';
 const SESI_TAMAT = 'Sesi tamat. Sila log masuk semula.';
 const RALAT_LOGIN = 'ID atau PIN tidak sah.';
 
 // ---------- Menu & setup (dijalankan dari Google Sheet) ----------
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu('Smart Late Record')
+  SpreadsheetApp.getUi().createMenu('Semarak Tepat')
     .addItem('1. Setup tab', 'setupSheets')
     .addItem('2. Tambah pengguna', 'menuTambahPengguna')
     .addItem('3. Reset PIN pengguna', 'menuResetPin')
     .addItem('4. Masukkan murid olok-olok (ujian)', 'menuMuridOlokOlok')
-    .addSeparator()
-    .addItem('Import data murid (APDM)', 'importApdm')
     .addToUi();
 }
 
@@ -70,11 +57,11 @@ function setupSheets() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActive();
 
-  // Versi lama guna tab PENGGUNA berasaskan email. Simpan sebagai arkib.
+  // Tab versi lama (header berbeza) disimpan sebagai arkib, tidak dipadam
   ss.getSheets().forEach(function (sh) {
-    if (sh.getName().toUpperCase() === 'PENGGUNA' && sh.getLastRow() > 0 &&
-        String(sh.getRange(1, 1).getValue()).trim() === 'Email') {
-      sh.setName('PENGGUNA_LAMA_EMAIL');
+    const nama = Object.keys(HEADERS).find(function (k) { return k.toUpperCase() === sh.getName().toUpperCase(); });
+    if (nama && sh.getLastRow() > 0 && String(sh.getRange(1, 1).getValue()).trim() !== HEADERS[nama][0]) {
+      sh.setName(sh.getName().toUpperCase() + '_LAMA');
     }
   });
 
@@ -86,12 +73,11 @@ function setupSheets() {
       sh.getRange(1, 1, 1, HEADERS[name].length).setFontWeight('bold');
     }
   });
-  if (!ss.getSheetByName(TAB.IMPORT)) ss.insertSheet(TAB.IMPORT);
 
   // Kolum teks supaya Sheets tak tukar jadi tarikh/nombor
-  ss.getSheetByName(TAB.MURID).getRange('A:A').setNumberFormat('@');
-  ss.getSheetByName(TAB.REKOD).getRange('C:D').setNumberFormat('@');
-  ss.getSheetByName(TAB.REKOD).getRange('F:F').setNumberFormat('@');
+  ss.getSheetByName(TAB.MURID).getRange('A:B').setNumberFormat('@');
+  ss.getSheetByName(TAB.MURID).getRange('D:E').setNumberFormat('@');
+  ss.getSheetByName(TAB.REKOD).getRange('A:I').setNumberFormat('@');
   ss.getSheetByName(TAB.PENGGUNA).getRange('A:F').setNumberFormat('@');
   ss.getSheetByName(TAB.TETAPAN).getRange('A:B').setNumberFormat('@');
   ss.setSpreadsheetTimeZone(CONFIG.ZON_WAKTU);
@@ -156,56 +142,23 @@ function menuResetPin() {
 function menuMuridOlokOlok() {
   const ui = SpreadsheetApp.getUi();
   const sh = sheet_(TAB.MURID);
-  if (sh.getLastRow() > 1) { ui.alert('Tab MURID sudah ada data. Data olok-olok hanya dimasukkan ke tab yang kosong.'); return; }
-  const kelas = ['1 Amanah', '2 Bestari', '3 Cekal'];
+  if (sh.getLastRow() > 1) { ui.alert('Tab Murid sudah ada data. Data olok-olok hanya dimasukkan ke tab yang kosong.'); return; }
+  const kelas = [[1, 'Amanah'], [2, 'Bestari'], [3, 'Cekal']];
   const rows = [];
   for (let i = 1; i <= 15; i++) {
-    const n = ('0' + i).slice(-2);
-    rows.push(['UJI00' + n, 'MURID UJIAN ' + n, kelas[(i - 1) % kelas.length], 'YA']);
+    const k = kelas[(i - 1) % kelas.length];
+    rows.push([idMuridBaru_(i - 1), 'Murid Ujian ' + ('0' + i).slice(-2), k[0], k[1], 'aktif']);
   }
-  sh.getRange(2, 1, rows.length, 4).setValues(rows);
+  sh.getRange(2, 1, rows.length, 5).setValues(rows);
+  PropertiesService.getScriptProperties().setProperty('MURID_SEQ', String(rows.length));
   ui.alert(rows.length + ' murid olok-olok dimasukkan. Padam semua sebelum import data murid sebenar.');
-}
-
-function importApdm() {
-  const ui = SpreadsheetApp.getUi();
-  const sh = sheet_(TAB.IMPORT);
-  const values = sh.getDataRange().getDisplayValues();
-  if (values.length < 2) {
-    ui.alert('Tab IMPORT_APDM kosong. Paste data APDM (termasuk baris header) dahulu.');
-    return;
-  }
-
-  let col;
-  try { col = padanKolum_(values[0]); } catch (e) { ui.alert(e.message); return; }
-
-  const seen = {};
-  const rows = [];
-  values.slice(1).forEach(function (r) {
-    const id = String(r[col.noDaftar]).trim();
-    const nama = String(r[col.nama]).trim();
-    if (!id || !nama || seen[id]) return;
-    seen[id] = true;
-    rows.push([clean_(id, 30), clean_(nama, 150), clean_(String(r[col.kelas]).trim(), 50), 'YA']);
-  });
-  if (!rows.length) { ui.alert('Tiada data murid yang sah dijumpai.'); return; }
-
-  const jawab = ui.alert('Import ' + rows.length + ' murid?\n\nSenarai MURID sedia ada akan diganti. Rekod kelewatan lama tidak terjejas.', ui.ButtonSet.YES_NO);
-  if (jawab !== ui.Button.YES) return;
-
-  const murid = sheet_(TAB.MURID);
-  if (murid.getLastRow() > 1) murid.getRange(2, 1, murid.getLastRow() - 1, 4).clearContent();
-  murid.getRange(2, 1, rows.length, 4).setValues(rows);
-  sh.clear(); // buang salinan penuh APDM (mungkin ada IC, alamat dll.)
-  log_(penggunaSheet_(), 'MURID_DIIMPORT', 'APDM: ' + rows.length + ' murid (ganti senarai)');
-  ui.alert('Selesai. ' + rows.length + ' murid diimport. Tab IMPORT_APDM telah dikosongkan.');
 }
 
 // ---------- Web app ----------
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Smart Late Record')
+    .setTitle('Semarak Tepat')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -309,6 +262,7 @@ function logKeluar(token) {
   return true;
 }
 
+
 // ---------- Data web app (semua perlu token sesi) ----------
 
 function getInit(token) {
@@ -318,82 +272,61 @@ function getInit(token) {
     user: { id: user.id, nama: user.nama, peranan: user.peranan },
     kelas: senaraiKelas_(),
     sebab: senaraiSebab_(),
-    sebabLain: SEBAB_LAIN,
     config: {
       sekolah: CONFIG.NAMA_SEKOLAH,
-      kod: CONFIG.KOD_SEKOLAH,
-      logo: CONFIG.LOGO_URL,
       waktuLewat: t.had_lewat,
-      hadKerap: hadTindakan_()
+      hadTindakan: hadTindakan_(),
+      masaServer: Date.now()  // untuk selaraskan jam paparan dengan jam server
     }
   };
 }
 
-function getMuridKelas(token, kelas) {
+// Senarai murid aktif untuk skrin Rekod, dan masa rekod hari ini (semua perekod)
+// supaya murid yang sudah direkod tidak direkod dua kali.
+function getMuridAktif(token) {
   requireUser_(token);
-  return readRows_(TAB.MURID)
-    .filter(function (m) { return isAktif_(m) && String(m.Kelas) === String(kelas); })
-    .map(pubMurid_)
+  const today = fmt_(new Date(), 'yyyy-MM-dd');
+  const hariIni = {};
+  readRekod_().forEach(function (r) {
+    if (r.tarikh === today && !r.batal) hariIni[r.idMurid] = { masa: r.masa.slice(0, 5), lewat: r.lewat };
+  });
+  const murid = readMurid_().filter(function (m) { return m.aktif; })
+    .map(function (m) { return { id: m.id, nama: m.nama, kelas: m.label }; })
     .sort(function (a, b) { return a.nama.localeCompare(b.nama); });
+  return { murid: murid, hariIni: hariIni };
 }
 
-function cariMurid(token, q) {
-  requireUser_(token);
-  q = String(q || '').trim().toLowerCase();
-  if (q.length < 3) return [];
-  return readRows_(TAB.MURID)
-    .filter(function (m) { return isAktif_(m) && String(m.Nama).toLowerCase().indexOf(q) > -1; })
-    .slice(0, 20)
-    .map(pubMurid_);
-}
-
-function simpanRekod(token, input) {
+function simpanRekod(token, idMurid, sebab) {
   const user = requireUser_(token);
-  const ids = Array.isArray(input && input.noDaftar) ? input.noDaftar.map(String) : [];
-  if (!ids.length) throw new Error('Pilih sekurang-kurangnya seorang murid.');
-  if (ids.length > 60) throw new Error('Maksimum 60 murid sekali simpan.');
-  const sebab = String(input.sebab || '').trim();
-  const catatan = semakSebab_(sebab, input.catatan);
-
-  const muridMap = {};
-  readRows_(TAB.MURID).filter(isAktif_).forEach(function (m) { muridMap[String(m.NoDaftar)] = m; });
-  const tiada = ids.filter(function (id) { return !muridMap[id]; });
-  if (tiada.length) throw new Error('Murid tidak dijumpai: ' + tiada.join(', '));
+  idMurid = String(idMurid || '').trim();
+  sebab = String(sebab || '').trim();
+  if (sebab && senaraiSebab_().indexOf(sebab) === -1) throw new Error('Sebab tidak sah.');
+  const m = readMurid_().find(function (x) { return x.id === idMurid && x.aktif; });
+  if (!m) throw new Error('Murid tidak dijumpai atau tidak aktif.');
 
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const t = sekarang_();
-    const lewat = minitLewat_(t.minit);
+    const t = sekarang_();  // masa tiba dicap oleh server, bukan dari pelayar
     const rekod = readRekod_();
+    const sudah = rekod.find(function (r) { return r.tarikh === t.tarikh && r.idMurid === idMurid && !r.batal; });
+    if (sudah) throw new Error(m.nama + ' sudah direkod hari ini pada ' + sudah.masa.slice(0, 5) + '.');
 
-    const amaran = [];
-    if (lewat <= 0) amaran.push('Sekarang ' + t.masa.slice(0, 5) + ', belum lewat (had ' + tetapan_().had_lewat + ').');
-    const sudah = ids.filter(function (id) {
-      return rekod.some(function (r) { return r.tarikh === t.tarikh && r.noDaftar === id; });
-    });
-    if (sudah.length) {
-      amaran.push('Sudah direkod hari ini: ' + sudah.map(function (id) { return muridMap[id].Nama; }).join(', '));
-    }
-    if (amaran.length && !input.sahkan) return { perluSahkan: true, amaran: amaran };
+    const lewat = minitLewat_(t.minit) > 0;
+    const id = 'R' + fmt_(t.d, 'yyyyMMddHHmmss') + Utilities.getUuid().slice(0, 4).toUpperCase();
+    const row = {
+      ID_Rekod: id, Tarikh: t.tarikh, Masa_Tiba: t.masa, ID_Murid: idMurid, Kelas: clean_(m.label, 40),
+      ID_Pengguna: user.id, Sebab: sebab, Lewat: lewat ? 'ya' : 'tidak',
+      Status: lewat ? 'menunggu semakan' : '', Dibatalkan: 'tidak'
+    };
+    sheet_(TAB.REKOD).appendRow(HEADERS.Rekod.map(function (h) { return row[h] === undefined ? '' : row[h]; }));
+    log_(user.id, 'REKOD_DIBUAT', id + ' ' + idMurid + (lewat ? ' (lewat)' : ' (tidak lewat)'));
 
-    const minit = Math.max(0, lewat);
-    const rows = ids.map(function (id) {
-      const m = muridMap[id];
-      return [Utilities.getUuid(), t.d, t.tarikh, t.masa, minit,
-        clean_(m.NoDaftar, 30), clean_(m.Nama, 150), clean_(m.Kelas, 50), sebab, catatan, user.id];
-    });
-    const sh = sheet_(TAB.REKOD);
-    sh.getRange(sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
-    log_(user.id, 'REKOD_DIBUAT', ids.join(', '));
-
-    const had = hadTindakan_();
     const bulan = t.tarikh.slice(0, 7);
-    const disimpan = ids.map(function (id) {
-      const kali = rekod.filter(function (r) { return r.noDaftar === id && r.tarikh.slice(0, 7) === bulan; }).length + 1;
-      return { nama: String(muridMap[id].Nama), kelas: String(muridMap[id].Kelas), kaliBulanIni: kali, kerap: kali >= had };
-    });
-    return { ok: true, disimpan: disimpan, minitLewat: minit };
+    const kali = lewat ? rekod.filter(function (r) {
+      return r.idMurid === idMurid && r.lewat && !r.batal && r.tarikh.slice(0, 7) === bulan;
+    }).length + 1 : 0;
+    return { nama: m.nama, masa: t.masa.slice(0, 5), lewat: lewat, kaliBulanIni: kali, hadTindakan: hadTindakan_() };
   } finally {
     lock.releaseLock();
   }
@@ -402,35 +335,41 @@ function simpanRekod(token, input) {
 function getRekodHariIni(token) {
   const user = requireUser_(token);
   const today = fmt_(new Date(), 'yyyy-MM-dd');
-  const list = readRekod_().filter(function (r) {
-    return r.tarikh === today && (user.peranan !== 'PENGAWAS' || r.oleh === user.id);
-  }).map(pub_).reverse();
-  return { list: list, bolehUbah: user.peranan === 'ADMIN' };
+  const nama = petaNamaMurid_();
+  return readRekod_().filter(function (r) {
+    return r.tarikh === today && !r.batal && (user.peranan !== 'PENGAWAS' || r.oleh === user.id);
+  }).map(function (r) {
+    const sendiri = r.oleh === user.id;
+    return {
+      id: r.id, masa: r.masa.slice(0, 5), nama: nama[r.idMurid] || r.idMurid, idMurid: r.idMurid,
+      kelas: r.kelas, sebab: r.sebab, lewat: r.lewat, status: r.status, oleh: r.oleh,
+      bolehBatal: sendiri || user.peranan === 'ADMIN',
+      perluCatatan: !sendiri && user.peranan === 'ADMIN'
+    };
+  }).reverse();
 }
 
-function kemaskiniRekod(token, id, sebab, catatan) {
-  const user = requireUser_(token, ['ADMIN']);
-  const c = semakSebab_(String(sebab || '').trim(), catatan);
+// Rekod tidak dipadam, cuma ditanda dibatalkan.
+// Pengawas dan guru: rekod sendiri pada hari yang sama. Admin: semua rekod, dengan catatan.
+function batalRekod(token, idRekod, catatan) {
+  const user = requireUser_(token);
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const r = cariRekod_(id);
-    sheet_(TAB.REKOD).getRange(r._row, 9, 1, 2).setValues([[sebab, c]]);
-    log_(user.id, 'REKOD_DIUBAH', r.id + ' (' + r.noDaftar + ')');
-    return true;
-  } finally {
-    lock.releaseLock();
-  }
-}
-
-function padamRekod(token, id) {
-  const user = requireUser_(token, ['ADMIN']);
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
-  try {
-    const r = cariRekod_(id);
-    sheet_(TAB.REKOD).deleteRow(r._row);
-    log_(user.id, 'REKOD_DIPADAM', r.id + ' (' + r.noDaftar + ', ' + r.tarikh + ')');
+    const r = readRekod_().find(function (x) { return x.id === String(idRekod); });
+    if (!r) throw new Error('Rekod tidak dijumpai.');
+    if (r.batal) throw new Error('Rekod ini sudah dibatalkan.');
+    const t = sekarang_();
+    const sendiri = r.oleh === user.id && r.tarikh === t.tarikh;
+    const c = clean_(catatan, 200);
+    if (!sendiri) {
+      if (user.peranan !== 'ADMIN') throw new Error('Anda hanya boleh membatalkan rekod sendiri pada hari yang sama.');
+      if (!c) throw new Error('Sila isi catatan sebab pembatalan.');
+    }
+    const sh = sheet_(TAB.REKOD);
+    const col = HEADERS.Rekod.indexOf('Dibatalkan') + 1;
+    sh.getRange(r._row, col, 1, 4).setValues([['ya', user.id, fmt_(t.d, 'yyyy-MM-dd HH:mm:ss'), c]]);
+    log_(user.id, 'REKOD_DIBATALKAN', r.id + ' ' + r.idMurid + (c ? ': ' + c : ''));
     return true;
   } finally {
     lock.releaseLock();
@@ -442,145 +381,128 @@ function getLaporan(token, p) {
   p = p || {};
   const re = /^\d{4}-\d{2}-\d{2}$/;
   if (!re.test(p.dari) || !re.test(p.hingga)) throw new Error('Tarikh tidak sah.');
-  if (p.dari > p.hingga) throw new Error('Tarikh "Dari" mesti sebelum atau sama dengan "Hingga".');
+  if (p.dari > p.hingga) throw new Error('Tarikh mula mesti sebelum atau sama dengan tarikh akhir.');
   const hari = (new Date(p.hingga) - new Date(p.dari)) / 86400000 + 1;
   if (hari > CONFIG.MAKS_HARI_LAPORAN) throw new Error('Tempoh maksimum ' + CONFIG.MAKS_HARI_LAPORAN + ' hari.');
-  const had = Math.max(1, parseInt(p.had, 10) || hadTindakan_());
 
-  const list = readRekod_().filter(function (r) {
-    return r.tarikh >= p.dari && r.tarikh <= p.hingga &&
-      (!p.kelas || r.kelas === p.kelas) && (!p.sebab || r.sebab === p.sebab);
-  }).map(pub_);
-  list.sort(function (a, b) { return (a.tarikh + a.masa).localeCompare(b.tarikh + b.masa); });
+  const nama = petaNamaMurid_();
+  const had = hadTindakan_();
+  const bulan = fmt_(new Date(), 'yyyy-MM');
+  const lewat = readRekod_().filter(function (r) { return r.lewat && !r.batal && (!p.kelas || r.kelas === p.kelas); });
+  const list = lewat.filter(function (r) { return r.tarikh >= p.dari && r.tarikh <= p.hingga; })
+    .sort(function (a, b) { return (a.tarikh + a.masa).localeCompare(b.tarikh + b.masa); });
 
-  function kira(key) {
+  function ikutMurid(rows) {
     const m = {};
-    list.forEach(function (r) { const k = key(r); m[k] = (m[k] || 0) + 1; });
-    return Object.keys(m).map(function (k) { return { k: k, n: m[k] }; })
-      .sort(function (a, b) { return b.n - a.n || a.k.localeCompare(b.k); });
+    rows.forEach(function (r) {
+      const o = m[r.idMurid] || (m[r.idMurid] = { id: r.idMurid, nama: nama[r.idMurid] || r.idMurid, kelas: r.kelas, n: 0 });
+      o.n++;
+    });
+    return Object.keys(m).map(function (k) { return m[k]; })
+      .sort(function (a, b) { return b.n - a.n || a.nama.localeCompare(b.nama); });
   }
-
-  const ikutMurid = {};
-  list.forEach(function (r) {
-    const m = ikutMurid[r.noDaftar] || (ikutMurid[r.noDaftar] = { noDaftar: r.noDaftar, nama: r.nama, kelas: r.kelas, n: 0, minit: 0 });
-    m.n++;
-    m.minit += r.minit;
-  });
-  const kerap = Object.keys(ikutMurid).map(function (k) { return ikutMurid[k]; })
-    .filter(function (m) { return m.n >= had; })
-    .sort(function (a, b) { return b.n - a.n || a.nama.localeCompare(b.nama); });
-  const ikutTarikh = kira(function (r) { return r.tarikh; });
-  const jumlahMinit = list.reduce(function (s, r) { return s + r.minit; }, 0);
+  const kerap = ikutMurid(list);
+  const bulanIni = ikutMurid(lewat.filter(function (r) { return r.tarikh.slice(0, 7) === bulan; }))
+    .filter(function (m) { return m.n >= had; });
 
   return {
-    dari: p.dari, hingga: p.hingga, had: had,
-    ringkasan: {
-      jumlah: list.length,
-      murid: Object.keys(ikutMurid).length,
-      hariPuncak: ikutTarikh[0] || null,
-      purataMinit: list.length ? Math.round(jumlahMinit / list.length) : 0
-    },
-    ikutKelas: kira(function (r) { return r.kelas; }),
-    ikutSebab: kira(function (r) { return r.sebab; }),
-    kerap: kerap,
-    list: list
+    dari: p.dari, hingga: p.hingga, had: had, bulan: bulan,
+    jumlah: list.length,
+    pelajar: kerap.length,
+    kerap: kerap.slice(0, 20),
+    melepasiHad: bulanIni,
+    list: list.map(function (r) {
+      return { tarikh: r.tarikh, masa: r.masa.slice(0, 5), idMurid: r.idMurid, nama: nama[r.idMurid] || r.idMurid,
+        kelas: r.kelas, sebab: r.sebab, status: r.status, oleh: r.oleh };
+    })
   };
 }
 
-// ---------- Urus murid (admin) ----------
+// ---------- Urus pelajar (admin) ----------
 
 function getSenaraiMurid(token) {
   requireUser_(token, ['ADMIN']);
-  return readRows_(TAB.MURID).filter(function (m) { return String(m.NoDaftar).trim(); })
-    .map(function (m) {
-      const o = pubMurid_(m);
-      o.aktif = isAktif_(m);
-      return o;
-    })
-    .sort(function (a, b) { return a.kelas.localeCompare(b.kelas) || a.nama.localeCompare(b.nama); });
+  return readMurid_().map(function (m) {
+    return { id: m.id, nama: m.nama, tingkatan: m.tingkatan, kelas: m.kelas, label: m.label, aktif: m.aktif };
+  }).sort(function (a, b) { return a.label.localeCompare(b.label) || a.nama.localeCompare(b.nama); });
 }
 
-// baru = true untuk tambah murid; false untuk edit murid sedia ada (ikut noDaftar)
-function simpanMurid(token, m, baru) {
+function tambahMurid(token, input) {
+  const user = requireUser_(token, ['ADMIN']);
+  input = input || {};
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const semua = readMurid_();
+    const m = normMurid_(input.nama, input.tingkatan, input.kelas, semua);
+    const sama = semua.find(function (x) { return x.aktif && kunciMurid_(x) === kunciMurid_(m); });
+    if (sama) throw new Error(m.nama + ' sudah ada dalam ' + sama.label + ' (' + sama.id + ').');
+    const id = idMuridSeterusnya_(semua);
+    sheet_(TAB.MURID).appendRow([id, m.nama, m.tingkatan, m.kelas, 'aktif']);
+    simpanSeqMurid_(id);
+    log_(user.id, 'MURID_DITAMBAH', id);
+    return { id: id, nama: m.nama, kelas: m.tingkatan + ' ' + m.kelas, senaraiKelas: senaraiKelas_() };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function tukarStatusMurid(token, idMurid, aktif) {
   const user = requireUser_(token, ['ADMIN']);
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const semua = readRows_(TAB.MURID);
-    const row = normMurid_(m || {}, semua.map(function (r) { return String(r.Kelas); }));
-    const ada = semua.find(function (r) { return String(r.NoDaftar).trim() === row[0]; });
-    const sh = sheet_(TAB.MURID);
-    if (baru) {
-      if (ada) throw new Error('No. Daftar ' + row[0] + ' sudah wujud (' + ada.Nama + ').');
-      sh.getRange(sh.getLastRow() + 1, 1, 1, 4).setValues([row]);
-    } else {
-      if (!ada) throw new Error('Murid tidak dijumpai.');
-      sh.getRange(ada._row, 1, 1, 4).setValues([row]);
-    }
-    log_(user.id, baru ? 'MURID_DITAMBAH' : 'MURID_DIUBAH', row[0]);
+    const m = readMurid_().find(function (x) { return x.id === String(idMurid); });
+    if (!m) throw new Error('Murid tidak dijumpai.');
+    sheet_(TAB.MURID).getRange(m._row, 5).setValue(aktif ? 'aktif' : 'tidak aktif');
+    log_(user.id, 'MURID_STATUS', m.id + ' -> ' + (aktif ? 'aktif' : 'tidak aktif'));
+    return { senaraiKelas: senaraiKelas_() };
   } finally {
     lock.releaseLock();
   }
-  return { kelas: senaraiKelas_() };
 }
 
-// data = array baris CSV (baris pertama header). kemaskini = true untuk
-// kemas kini nama/kelas murid yang No. Daftar sudah wujud; false = langkau.
-function importMuridCsv(token, data, kemaskini) {
-  const user = requireUser_(token, ['ADMIN']);
-  if (!Array.isArray(data) || data.length < 2) throw new Error('Fail kosong atau tiada baris data.');
-  if (data.length > 3001) throw new Error('Maksimum 3000 murid sekali import.');
-  const col = padanKolum_(data[0]);
+// Langkah 1 import: semak sahaja, tiada apa disimpan
+function semakImportMurid(token, data) {
+  requireUser_(token, ['ADMIN']);
+  const p = rancangImport_(data, readMurid_());
+  return { ralat: p.ralat, baru: p.baru.length, kekal: p.kekal, aktifSemula: p.aktifSemula.length,
+    tidakAktif: p.tidakAktif.length, contohTidakAktif: p.tidakAktif.slice(0, 10).map(function (m) { return m.nama + ' (' + m.label + ')'; }),
+    amaran: p.amaran };
+}
 
+// Langkah 2 import: semak semula, backup tab Murid, kemudian simpan semua atau tiada langsung
+function simpanImportMurid(token, data) {
+  const user = requireUser_(token, ['ADMIN']);
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
+    const semua = readMurid_();
+    const p = rancangImport_(data, semua);
+    if (p.ralat.length) throw new Error('Fail masih ada ' + p.ralat.length + ' ralat. Tiada apa disimpan.');
+
+    const ss = SpreadsheetApp.getActive();
+    const namaBackup = 'Murid_backup_' + fmt_(new Date(), 'yyyyMMdd_HHmmss');
+    sheet_(TAB.MURID).copyTo(ss).setName(namaBackup);
+
+    // Kemas kini lajur Status sekali gus (lebih laju daripada satu sel satu panggilan)
     const sh = sheet_(TAB.MURID);
-    const values = sh.getDataRange().getValues();
-    const head = values.shift();
-    const indeks = {};
-    values.forEach(function (r, i) { indeks[String(r[0]).trim()] = i; });
-    const kelasSedia = values.map(function (r) { return String(r[2]); });
-
-    const hasil = { tambah: 0, kemaskini: 0, langkau: 0, ralat: [] };
-    const dalamFail = {};
-    data.slice(1).forEach(function (r, i) {
-      if (!Array.isArray(r) || r.every(function (v) { return !String(v || '').trim(); })) return;
-      const baris = i + 2;
-      let row;
-      try {
-        row = normMurid_({ noDaftar: r[col.noDaftar], nama: r[col.nama], kelas: r[col.kelas] }, kelasSedia);
-      } catch (e) {
-        hasil.ralat.push('Baris ' + baris + ': ' + e.message);
-        return;
-      }
-      if (dalamFail[row[0]]) {
-        hasil.ralat.push('Baris ' + baris + ': No. Daftar ' + row[0] + ' berganda dalam fail (sama dengan baris ' + dalamFail[row[0]] + ').');
-        return;
-      }
-      dalamFail[row[0]] = baris;
-      if (row[2] && kelasSedia.indexOf(row[2]) === -1) kelasSedia.push(row[2]);
-
-      if (indeks[row[0]] === undefined) {
-        indeks[row[0]] = values.length;
-        values.push(row);
-        hasil.tambah++;
-      } else if (kemaskini) {
-        values[indeks[row[0]]] = row;
-        hasil.kemaskini++;
-      } else {
-        hasil.langkau++;
-      }
-    });
-
-    if (hasil.tambah || hasil.kemaskini) {
-      sh.getRange(2, 1, values.length, head.length).setValues(values.map(function (r) {
-        return head.map(function (_, j) { return r[j] === undefined ? '' : r[j]; });
-      }));
+    if (semua.length) {
+      const status = sh.getRange(2, 5, sh.getLastRow() - 1, 1).getValues();
+      p.aktifSemula.forEach(function (m) { status[m._row - 2][0] = 'aktif'; });
+      p.tidakAktif.forEach(function (m) { status[m._row - 2][0] = 'tidak aktif'; });
+      sh.getRange(2, 5, status.length, 1).setValues(status);
     }
-    log_(user.id, 'MURID_DIIMPORT', 'CSV: tambah ' + hasil.tambah + ', kemas kini ' + hasil.kemaskini + ', ralat ' + hasil.ralat.length);
-    hasil.kelas = senaraiKelas_();
-    return hasil;
+    let seq = seqMurid_(semua);
+    const rows = p.baru.map(function (m) { return [idMuridBaru_(seq++), m.nama, m.tingkatan, m.kelas, 'aktif']; });
+    if (rows.length) {
+      sh.getRange(sh.getLastRow() + 1, 1, rows.length, 5).setValues(rows);
+      simpanSeqMurid_(rows[rows.length - 1][0]);
+    }
+    log_(user.id, 'MURID_DIIMPORT', 'Baru ' + rows.length + ', kekal ' + p.kekal + ', aktif semula ' + p.aktifSemula.length +
+      ', tidak aktif ' + p.tidakAktif.length + '. Backup: ' + namaBackup);
+    return { baru: rows.length, kekal: p.kekal, aktifSemula: p.aktifSemula.length, tidakAktif: p.tidakAktif.length,
+      backup: namaBackup, senaraiKelas: senaraiKelas_() };
   } finally {
     lock.releaseLock();
   }
@@ -728,6 +650,148 @@ function log_(id, tindakan, butiran) {
   sh.appendRow([new Date(), clean_(id, 60), tindakan, clean_(butiran, 300)]);
 }
 
+
+// ---------- Helper murid & rekod (private) ----------
+
+function readMurid_() {
+  return readRows_(TAB.MURID).filter(function (r) { return String(r.ID_Murid).trim(); }).map(function (r) {
+    const ting = String(r.Tingkatan).trim();
+    const kelas = String(r.Kelas).trim();
+    return {
+      id: String(r.ID_Murid).trim(), nama: String(r.Nama).trim(), tingkatan: ting, kelas: kelas,
+      label: ting + ' ' + kelas, aktif: String(r.Status).trim().toLowerCase() !== 'tidak aktif', _row: r._row
+    };
+  });
+}
+
+function readRekod_() {
+  return readRows_(TAB.REKOD).filter(function (r) { return r.ID_Rekod; }).map(function (r) {
+    return {
+      id: String(r.ID_Rekod),
+      tarikh: r.Tarikh instanceof Date ? fmt_(r.Tarikh, 'yyyy-MM-dd') : String(r.Tarikh),
+      masa: r.Masa_Tiba instanceof Date ? fmt_(r.Masa_Tiba, 'HH:mm:ss') : String(r.Masa_Tiba),
+      idMurid: String(r.ID_Murid),
+      kelas: String(r.Kelas),
+      oleh: String(r.ID_Pengguna),
+      sebab: String(r.Sebab),
+      lewat: String(r.Lewat).trim().toLowerCase() === 'ya',
+      status: String(r.Status),
+      batal: String(r.Dibatalkan).trim().toLowerCase() === 'ya',
+      _row: r._row
+    };
+  });
+}
+
+function petaNamaMurid_() {
+  const p = {};
+  readMurid_().forEach(function (m) { p[m.id] = m.nama; });
+  return p;
+}
+
+function senaraiKelas_() {
+  const set = {};
+  readMurid_().forEach(function (m) { if (m.aktif) set[m.label] = [Number(m.tingkatan), m.kelas]; });
+  return Object.keys(set).sort(function (a, b) { return set[a][0] - set[b][0] || set[a][1].localeCompare(set[b][1]); });
+}
+
+function senaraiSebab_() {
+  return tetapan_().sebab_lewat.split(',').map(function (s) { return s.trim(); }).filter(String);
+}
+
+// Semak dan kemaskan satu murid. Ejaan kelas diselaraskan dengan kelas sedia ada.
+function normMurid_(nama, tingkatan, kelas, semua) {
+  nama = String(nama == null ? '' : nama).replace(/\s+/g, ' ').trim();
+  kelas = String(kelas == null ? '' : kelas).replace(/\s+/g, ' ').trim();
+  const t = String(tingkatan == null ? '' : tingkatan).trim();
+  if (!nama) throw new Error('Nama wajib diisi.');
+  if (nama.length > 150) throw new Error('Nama terlalu panjang (maks 150 aksara).');
+  if (!/^[1-5]$/.test(t)) throw new Error('Tingkatan mesti 1 hingga 5.');
+  if (!kelas) throw new Error('Kelas wajib diisi.');
+  if (kelas.length > 30) throw new Error('Nama kelas terlalu panjang (maks 30 aksara).');
+  const sedia = (semua || []).find(function (m) { return m.kelas.toLowerCase() === kelas.toLowerCase(); });
+  if (sedia) kelas = sedia.kelas;
+  return { nama: clean_(nama, 150), tingkatan: Number(t), kelas: clean_(kelas, 30) };
+}
+
+function kunciMurid_(m) {
+  return String(m.nama).toUpperCase() + '|' + m.tingkatan + '|' + String(m.kelas).toUpperCase();
+}
+
+// Rancang import CSV tanpa menulis apa-apa. data = array baris, baris pertama header.
+function rancangImport_(data, semua) {
+  if (!Array.isArray(data) || data.length < 2) throw new Error('Fail kosong atau tiada baris data.');
+  if (data.length > CONFIG.MAKS_IMPORT + 1) throw new Error('Maksimum ' + CONFIG.MAKS_IMPORT + ' murid sekali import.');
+  const head = (data[0] || []).map(function (h) { return String(h).replace(/^﻿/, '').trim().toUpperCase(); });
+  const col = { nama: head.indexOf('NAMA'), tingkatan: head.indexOf('TINGKATAN'), kelas: head.indexOf('KELAS') };
+  const hilang = Object.keys(col).filter(function (k) { return col[k] === -1; });
+  if (hilang.length) throw new Error('Lajur tidak dijumpai: ' + hilang.join(', ') + '. Baris pertama mesti Nama, Tingkatan, Kelas.');
+
+  const indeks = {};
+  semua.forEach(function (m) { (indeks[kunciMurid_(m)] = indeks[kunciMurid_(m)] || []).push(m); });
+
+  const p = { ralat: [], baru: [], kekal: 0, aktifSemula: [], tidakAktif: [], amaran: '' };
+  const dalamFail = {};
+  const dipadan = {};
+  data.slice(1).forEach(function (r, i) {
+    if (!Array.isArray(r) || r.every(function (v) { return !String(v == null ? '' : v).trim(); })) return;
+    const baris = i + 2;
+    let m;
+    try {
+      m = normMurid_(r[col.nama], r[col.tingkatan], r[col.kelas], semua);
+    } catch (e) {
+      p.ralat.push('Baris ' + baris + ': ' + e.message);
+      return;
+    }
+    const k = kunciMurid_(m);
+    if (dalamFail[k]) {
+      p.ralat.push('Baris ' + baris + ': ' + m.nama + ' (' + m.tingkatan + ' ' + m.kelas + ') berganda dengan baris ' + dalamFail[k] + '.');
+      return;
+    }
+    dalamFail[k] = baris;
+    const padan = indeks[k] || [];
+    if (padan.length > 1) {
+      p.ralat.push('Baris ' + baris + ': ada ' + padan.length + ' murid bernama ' + m.nama + ' dalam ' + m.tingkatan + ' ' + m.kelas +
+        ' (' + padan.map(function (x) { return x.id; }).join(', ') + '). Betulkan dalam tab Murid dahulu.');
+      return;
+    }
+    if (padan.length === 1) {
+      dipadan[padan[0].id] = true;
+      if (padan[0].aktif) p.kekal++;
+      else p.aktifSemula.push(padan[0]);
+    } else {
+      p.baru.push(m);
+    }
+  });
+
+  p.tidakAktif = semua.filter(function (m) { return m.aktif && !dipadan[m.id]; });
+  const aktif = semua.filter(function (m) { return m.aktif; }).length;
+  if (aktif >= 20 && p.tidakAktif.length > aktif / 2) {
+    p.amaran = p.tidakAktif.length + ' daripada ' + aktif + ' murid aktif akan jadi tidak aktif. ' +
+      'Pastikan fail ini senarai penuh semua kelas, bukan satu kelas sahaja.';
+  }
+  return p;
+}
+
+// ID murid tidak pernah digunakan semula: nombor seterusnya diambil daripada
+// nilai terbesar antara tab Murid dan kaunter dalam Script Properties.
+function seqMurid_(semua) {
+  const maksSheet = semua.reduce(function (m, x) { return Math.max(m, Number(String(x.id).slice(3)) || 0); }, 0);
+  const prop = Number(PropertiesService.getScriptProperties().getProperty('MURID_SEQ')) || 0;
+  return Math.max(maksSheet, prop);
+}
+
+function idMuridSeterusnya_(semua) {
+  return idMuridBaru_(seqMurid_(semua));
+}
+
+function idMuridBaru_(seq) {
+  return 'MUR' + String(seq + 1).padStart(4, '0');
+}
+
+function simpanSeqMurid_(id) {
+  PropertiesService.getScriptProperties().setProperty('MURID_SEQ', String(Number(String(id).slice(3)) || 0));
+}
+
 // ---------- Helper data (private) ----------
 
 // Nilai Tetapan dibaca sebagai teks (getDisplayValues) supaya "07:20" tak jadi tarikh 1899
@@ -754,11 +818,6 @@ function hadTindakan_() {
   return Math.max(1, parseInt(tetapan_().had_tindakan_sebulan, 10) || 3);
 }
 
-function senaraiKelas_() {
-  const murid = readRows_(TAB.MURID).filter(isAktif_);
-  return Array.from(new Set(murid.map(function (m) { return String(m.Kelas); }))).sort();
-}
-
 function sheet_(name) {
   const sh = SpreadsheetApp.getActive().getSheetByName(name);
   if (!sh) throw new Error('Tab ' + name + ' tiada. Jalankan menu Setup dahulu.');
@@ -773,87 +832,6 @@ function readRows_(name) {
     head.forEach(function (h, j) { o[h] = r[j]; });
     return o;
   });
-}
-
-function readRekod_() {
-  return readRows_(TAB.REKOD).filter(function (r) { return r.ID; }).map(function (r) {
-    return {
-      id: String(r.ID),
-      tarikh: r.Tarikh instanceof Date ? fmt_(r.Tarikh, 'yyyy-MM-dd') : String(r.Tarikh),
-      masa: r.Masa instanceof Date ? fmt_(r.Masa, 'HH:mm:ss') : String(r.Masa),
-      minit: Number(r.MinitLewat) || 0,
-      noDaftar: String(r.NoDaftar),
-      nama: String(r.Nama),
-      kelas: String(r.Kelas),
-      sebab: String(r.Sebab),
-      catatan: String(r.Catatan),
-      oleh: String(r.DirekodOleh),
-      _row: r._row
-    };
-  });
-}
-
-function cariRekod_(id) {
-  const r = readRekod_().find(function (x) { return x.id === String(id); });
-  if (!r) throw new Error('Rekod tidak dijumpai. Mungkin sudah dipadam.');
-  return r;
-}
-
-function senaraiSebab_() {
-  return tetapan_().sebab_lewat.split(',').map(function (s) { return s.trim(); }).filter(String);
-}
-
-function semakSebab_(sebab, catatan) {
-  if (senaraiSebab_().indexOf(sebab) === -1) throw new Error('Sebab tidak sah.');
-  const c = clean_(catatan, 200);
-  if (sebab === SEBAB_LAIN && !c) throw new Error('Sila isi catatan untuk sebab Lain-lain.');
-  return c;
-}
-
-// Pulangkan [noDaftar, nama, kelas, aktif] yang sudah disemak, atau throw Error
-function normMurid_(m, kelasSedia) {
-  const noDaftar = String(m.noDaftar == null ? '' : m.noDaftar).trim();
-  const nama = String(m.nama == null ? '' : m.nama).replace(/\s+/g, ' ').trim().toUpperCase();
-  let kelas = String(m.kelas == null ? '' : m.kelas).replace(/\s+/g, ' ').trim();
-  if (!/^[A-Za-z0-9\-\/]{1,30}$/.test(noDaftar)) throw new Error('No. Daftar tidak sah "' + noDaftar + '" (huruf/nombor sahaja, maks 30).');
-  if (!nama) throw new Error('Nama wajib diisi.');
-  if (!kelas) throw new Error('Kelas wajib diisi.');
-  // Guna ejaan kelas sedia ada kalau sama (abaikan huruf besar/kecil)
-  const sedia = (kelasSedia || []).find(function (k) { return k.toLowerCase() === kelas.toLowerCase(); });
-  if (sedia) kelas = sedia;
-  return [clean_(noDaftar, 30), clean_(nama, 150), clean_(kelas, 50), m.aktif === false ? 'TIDAK' : 'YA'];
-}
-
-// Cari indeks kolum noDaftar/nama/kelas dalam baris header (ikut CONFIG.APDM_HEADER)
-function padanKolum_(headerRow) {
-  const head = (headerRow || []).map(function (h) { return String(h).replace(/^﻿/, '').trim().toUpperCase(); });
-  const col = {};
-  Object.keys(CONFIG.APDM_HEADER).forEach(function (k) {
-    const calon = CONFIG.APDM_HEADER[k].map(function (h) { return h.toUpperCase(); });
-    col[k] = head.findIndex(function (h) { return calon.indexOf(h) > -1; });
-  });
-  const hilang = Object.keys(col).filter(function (k) { return col[k] === -1; });
-  if (hilang.length) {
-    throw new Error('Header tidak dijumpai untuk: ' + hilang.join(', ') +
-      '. Header dalam fail: ' + head.join(' | ') +
-      '. Guna header NoDaftar, Nama, Kelas (atau tambah nama header dalam CONFIG.APDM_HEADER).');
-  }
-  return col;
-}
-
-function isAktif_(m) {
-  const a = String(m.Aktif).trim().toUpperCase();
-  return a === '' || a === 'YA' || a === 'TRUE';
-}
-
-function pubMurid_(m) {
-  return { noDaftar: String(m.NoDaftar), nama: String(m.Nama), kelas: String(m.Kelas) };
-}
-
-function pub_(r) {
-  const o = Object.assign({}, r);
-  delete o._row;
-  return o;
 }
 
 // Elak formula injection bila ditulis ke Sheets
