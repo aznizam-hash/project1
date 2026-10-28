@@ -613,6 +613,39 @@ function getTetapanTanpaSemak_() {
   return { waktuLewat: t.had_lewat, hadTindakan: hadTindakan_() };
 }
 
+// ---------- Log audit (admin) ----------
+
+// p = { dari, hingga, pengguna, tindakan }. Pulangkan paling baharu dahulu, maksimum 500 baris.
+function getLogAudit(token, p) {
+  requireUser_(token, ['ADMIN']);
+  p = p || {};
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  if (!re.test(p.dari) || !re.test(p.hingga)) throw new Error('Tarikh tidak sah.');
+  if (p.dari > p.hingga) throw new Error('Tarikh mula mesti sebelum atau sama dengan tarikh akhir.');
+  const hari = (new Date(p.hingga) - new Date(p.dari)) / 86400000 + 1;
+  if (hari > CONFIG.MAKS_HARI_LAPORAN) throw new Error('Tempoh maksimum ' + CONFIG.MAKS_HARI_LAPORAN + ' hari.');
+
+  const pengguna = {};
+  const tindakan = {};
+  const semua = readRows_(TAB.LOG).filter(function (r) { return r.Masa; }).map(function (r) {
+    const masa = r.Masa instanceof Date ? fmt_(r.Masa, 'yyyy-MM-dd HH:mm:ss') : String(r.Masa);
+    const o = { masa: masa, id: String(r.ID_Pengguna), tindakan: String(r.Tindakan), butiran: String(r.Butiran) };
+    pengguna[o.id] = true;
+    tindakan[o.tindakan] = true;
+    return o;
+  });
+  const list = semua.filter(function (r) {
+    const t = r.masa.slice(0, 10);
+    return t >= p.dari && t <= p.hingga && (!p.pengguna || r.id === p.pengguna) && (!p.tindakan || r.tindakan === p.tindakan);
+  }).reverse();
+  return {
+    jumlah: list.length,
+    list: list.slice(0, 500),
+    pengguna: Object.keys(pengguna).sort(),
+    tindakan: Object.keys(tindakan).sort()
+  };
+}
+
 // ---------- Urus pengguna (admin) ----------
 // Hash_PIN dan Salt tidak pernah dihantar ke pelayar.
 

@@ -22,7 +22,7 @@ Akaun demo (PIN semua `246810`): `ADM001` (admin), `GRU001` (guru disiplin), `PG
 |---|---|---|
 | Pengawas | PGW001, PGW002, ... | Rekod, Hari ini (rekod sendiri sahaja). Login hanya dalam waktu bertugas |
 | Guru disiplin | GRU001, ... | Rekod, Hari ini, Laporan |
-| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan, Tetapan (Pengguna dan Sistem) |
+| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan, Tetapan (Pengguna, Sistem, Log) |
 
 ## Langkah setup (sekali sahaja, ~20 minit)
 
@@ -78,6 +78,12 @@ Tab **Tetapan > Sistem** dalam web app. Tiada perubahan kod diperlukan.
 | Sebab lewat | 5 pilihan | Pilihan semasa merekod (maks 15, tiada koma). Rekod lama tidak berubah. |
 
 Semua nilai disemak sebelum disimpan. Jika satu tidak sah, tiada apa disimpan. Setiap perubahan direkod dalam `LogAudit` (nilai lama dan baharu).
+
+## Log audit (admin)
+
+Tab **Tetapan > Log**. Tapis ikut tarikh, pengguna dan jenis tindakan. Paparan tunjuk 500 entri terbaharu; tindakan penting (login gagal, rekod dibatalkan, PIN direset, tetapan diubah, import) ditanda merah. **Eksport CSV** untuk simpanan atau semakan lanjut.
+
+Log tidak boleh dipadam atau diubah dari web app. Hanya orang yang ada akses edit pada Sheet boleh ubah tab `LogAudit`.
 
 ## Rekod kelewatan
 
@@ -145,6 +151,7 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Edit seorang pelajar (tukar kelas): ID sama, rekod lama masih ada dalam laporan.
 - [ ] Tab Tetapan > Pengguna: tambah pengguna, reset PIN, jadikan tidak aktif. Pengguna tidak aktif terus dilog keluar.
 - [ ] Tab Tetapan > Sistem: tukar had lewat, kemudian rekod murid. Status lewat ikut had baharu.
+- [ ] Tab Tetapan > Log: login gagal, rekod dibuat dan perubahan tetapan semua kelihatan, dan tapisan pengguna berfungsi.
 - [ ] Eksport, tukar kelas dalam Excel, import semula: ID kekal dan kelas baru dipaparkan.
 - [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
 

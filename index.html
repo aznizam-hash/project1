@@ -283,6 +283,7 @@
       <div class="seg" id="segTetapan">
         <button data-seg="pengguna" class="on">Pengguna</button>
         <button data-seg="sistem">Sistem</button>
+        <button data-seg="log">Log</button>
       </div>
       <div id="seg-pengguna">
       <form class="card" id="formPengguna" autocomplete="off">
@@ -326,6 +327,24 @@
         <button class="btn" id="btnSimpanTetapan">Simpan tetapan</button>
         <div id="msgTetapan"></div>
       </form>
+
+      <div id="seg-log" hidden>
+        <div class="card">
+          <div class="row">
+            <div><label class="f" for="lgDari">Dari</label><input id="lgDari" type="date"></div>
+            <div><label class="f" for="lgHingga">Hingga</label><input id="lgHingga" type="date"></div>
+          </div>
+          <div class="row">
+            <div><label class="f" for="lgPengguna">Pengguna</label><select id="lgPengguna"><option value="">Semua</option></select></div>
+            <div><label class="f" for="lgTindakan">Tindakan</label><select id="lgTindakan"><option value="">Semua</option></select></div>
+          </div>
+          <button class="btn" id="btnCariLog">Papar log</button>
+          <div id="msgLog"></div>
+        </div>
+        <div class="sechead"><h2>Log audit</h2><span class="muted" id="bilLog"></span></div>
+        <div class="list" id="senaraiLog"><div class="kosong">Pilih tarikh dan tekan Papar log.</div></div>
+        <button class="btn sec" id="btnCsvLog" hidden>Eksport CSV</button>
+      </div>
     </section>
 
     <!-- LAPORAN -->
@@ -452,7 +471,8 @@ $('btnKeluar').addEventListener('click', () => {
 function keluarUI(pesan) {
   Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], pengguna: [], laporan: null, csv: null, sheetRekod: null });
   pilihSeg('pengguna');
-  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'senaraiPengguna', 'msgPengguna', 'msgTetapan', 'tsSebab', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
+  S.log = null; $('btnCsvLog').hidden = true; $('bilLog').textContent = '';
+  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'senaraiPengguna', 'msgPengguna', 'msgTetapan', 'tsSebab', 'senaraiLog', 'msgLog', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
     .forEach(id => $(id).innerHTML = '');
   ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'mNama', 'mKelas', 'pfCari', 'pgNama'].forEach(id => $(id).value = '');
   tutupSheet();
@@ -489,6 +509,7 @@ async function mula() {
     const j = jamKL();
     $('lpDari').value = j.iso.slice(0, 8) + '01';
     $('lpHingga').value = j.iso;
+    $('lgDari').value = $('lgHingga').value = j.iso;
     $('app').hidden = false;
     pilihTab('rekod');
     jam();
@@ -516,7 +537,7 @@ document.querySelectorAll('#nav button').forEach(b => b.addEventListener('click'
   if (b.dataset.tab === 'rekod') muatMurid();
   if (b.dataset.tab === 'hariini') muatHariIni();
   if (b.dataset.tab === 'pelajar') muatPelajar();
-  if (b.dataset.tab === 'pengguna') { if ($('seg-sistem').hidden) muatPengguna(); else muatTetapan(); }
+  if (b.dataset.tab === 'pengguna') { if (!$('seg-sistem').hidden) muatTetapan(); else if ($('seg-log').hidden) muatPengguna(); }
 }));
 
 // ---------- Jam ----------
@@ -943,12 +964,14 @@ function pilihSeg(seg) {
   document.querySelectorAll('#segTetapan button').forEach(b => b.classList.toggle('on', b.dataset.seg === seg));
   $('seg-pengguna').hidden = seg !== 'pengguna';
   $('seg-sistem').hidden = seg !== 'sistem';
+  $('seg-log').hidden = seg !== 'log';
 }
 $('segTetapan').addEventListener('click', e => {
   const b = e.target.closest('[data-seg]');
   if (!b) return;
   pilihSeg(b.dataset.seg);
   if (b.dataset.seg === 'sistem') muatTetapan();
+  else if (b.dataset.seg === 'log') { if (!S.log) cariLog(); }
   else muatPengguna();
 });
 
@@ -1005,6 +1028,55 @@ $('seg-sistem').addEventListener('submit', async e => {
     msg(el, 'ok', r.berubah ? `Tetapan disimpan (${r.berubah} perubahan).` : 'Tiada perubahan.');
   } catch (err) { if (!sesiTamat(err)) msg(el, 'bad', esc(err.message)); }
   finally { btn.disabled = false; }
+});
+
+// ---------- Log audit (admin) ----------
+const LABEL_TINDAKAN = {
+  LOGIN_BERJAYA: 'Login berjaya', LOGIN_GAGAL: 'Login gagal', LOGOUT: 'Log keluar', SESI_TAMAT: 'Sesi tamat',
+  TUKAR_PIN: 'Tukar PIN', PIN_DIRESET: 'PIN direset', PENGGUNA_DITAMBAH: 'Pengguna ditambah', PENGGUNA_STATUS: 'Status pengguna',
+  REKOD_DIBUAT: 'Rekod dibuat', REKOD_DIBATALKAN: 'Rekod dibatalkan', MURID_DITAMBAH: 'Pelajar ditambah',
+  MURID_DIUBAH: 'Pelajar diubah', MURID_STATUS: 'Status pelajar', MURID_DIIMPORT: 'Import pelajar', TETAPAN_DIUBAH: 'Tetapan diubah'
+};
+const TINDAKAN_AMARAN = ['LOGIN_GAGAL', 'REKOD_DIBATALKAN', 'PIN_DIRESET', 'PENGGUNA_STATUS', 'TETAPAN_DIUBAH', 'MURID_DIIMPORT'];
+
+$('btnCariLog').addEventListener('click', cariLog);
+async function cariLog() {
+  const btn = $('btnCariLog');
+  btn.disabled = true; msg($('msgLog'), '', '');
+  try {
+    S.log = await call('getLogAudit', { dari: $('lgDari').value, hingga: $('lgHingga').value,
+      pengguna: $('lgPengguna').value, tindakan: $('lgTindakan').value });
+    options($('lgPengguna'), S.log.pengguna, 'Semua');
+    const pilihT = $('lgTindakan').value;
+    $('lgTindakan').innerHTML = '<option value="">Semua</option>' +
+      S.log.tindakan.map(t => `<option value="${esc(t)}">${esc(LABEL_TINDAKAN[t] || t)}</option>`).join('');
+    $('lgTindakan').value = S.log.tindakan.includes(pilihT) ? pilihT : '';
+    renderLog();
+  } catch (e) { if (!sesiTamat(e)) msg($('msgLog'), 'bad', esc(e.message)); }
+  finally { btn.disabled = false; }
+}
+
+function renderLog() {
+  const r = S.log;
+  $('bilLog').textContent = r.jumlah > r.list.length ? `${r.list.length} terbaharu daripada ${r.jumlah}` : `${r.jumlah} entri`;
+  $('btnCsvLog').hidden = !r.list.length;
+  $('senaraiLog').innerHTML = r.list.length ? r.list.map(x => `<div class="item">
+      <span class="txt"><span class="nm">${esc(LABEL_TINDAKAN[x.tindakan] || x.tindakan)}</span>
+      <span class="sub"> · ${esc(x.id)}</span>${x.butiran ? `<br><span class="sub">${esc(x.butiran)}</span>` : ''}</span>
+      <span class="tag ${TINDAKAN_AMARAN.includes(x.tindakan) ? 'bad' : ''}">${esc(fmtD(x.masa.slice(0, 10)).slice(0, 5))} ${esc(x.masa.slice(11, 16))}</span></div>`).join('')
+    : '<div class="kosong">Tiada log untuk tapisan ini.</div>';
+}
+
+$('btnCsvLog').addEventListener('click', () => {
+  const r = S.log;
+  const rows = [['Masa', 'ID Pengguna', 'Tindakan', 'Butiran']].concat(r.list.map(x => [x.masa, x.id, x.tindakan, x.butiran]));
+  // Elak formula injection bila fail dibuka dalam Excel
+  const teks = rows.map(row => row.map(v => {
+    let s = String(v == null ? '' : v);
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return '"' + s.replace(/"/g, '""') + '"';
+  }).join(',')).join('\r\n');
+  muatTurun(`log-audit_${$('lgDari').value}_${$('lgHingga').value}.csv`, teks);
 });
 
 // ---------- Laporan ----------
