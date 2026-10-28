@@ -158,8 +158,8 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 ## Backup, simpanan dan pemadaman data
 
 - **Backup:** menu **SemarakLateRecord > 5. Pasang backup mingguan**. Salinan Sheet dibuat setiap Isnin jam 2 pagi dalam folder Drive yang sama. Jalankan sekali sahaja. Sebelum import murid, tab `Murid` juga dibackup automatik.
-- **Simpanan rekod:** ikut SPT sekolah dan cadangan PDPA. Tempoh: tahun semasa dan setahun selepas tu. Admin yang padam data bila tempoh tamat.
-- **Cara padam:** admin buat salinan Sheet dahulu, kemudian padam baris lama dalam tab `Rekod` dan `LogAudit`. Simpan rekod pemadaman dalam buku log luar.
+- **Tempoh simpanan:** 2 tahun dari tarikh rekod. Rekod, dan salinan backup yang mengandungi rekod tu, dipadam bila tempoh tamat. Admin yang buat pemadaman. Tempoh ni cadangan, belum disahkan dengan arahan KPM atau pegawai PDPA sekolah.
+- **Cara padam:** setiap awal tahun, admin buat salinan arkib Sheet, kemudian padam baris `Rekod` dan `LogAudit` yang lebih 2 tahun. Dalam Drive, padam juga salinan backup yang lebih 2 tahun. Simpan rekod pemadaman dalam buku log luar.
 - **Skop data:** sistem ni hanya merekod kehadiran lewat. Tiada integrasi dengan MOEIS. Tiada nombor rasmi murid digunakan.
 
 ## Nota PDPA
