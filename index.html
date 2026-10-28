@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Semarak Tepat</title>
+<title>SemarakLateRecord</title>
 <style>
   :root {
     --bg:#eef1f6; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
@@ -45,7 +45,7 @@
 
   /* Jam */
   .clock { text-align:center; padding:26px 18px 18px; }
-  .clock .hm { font-size:76px; font-weight:800; letter-spacing:-3px; line-height:1; font-variant-numeric:tabular-nums; }
+  .clock .hm { font-size:clamp(56px, 19vw, 96px); font-weight:800; letter-spacing:-3px; line-height:1; font-variant-numeric:tabular-nums; }
   .clock .s { font-size:26px; color:var(--muted); font-weight:500; letter-spacing:0; margin-left:4px; }
   .clock .tarikh { color:var(--muted); margin-top:10px; }
   .clock hr { border:0; border-top:1px solid var(--line); margin:16px 0 14px; }
@@ -95,20 +95,32 @@
   .ringkas div { border:1px solid var(--line); border-radius:10px; padding:10px; font-size:13px; color:var(--muted); }
   .ringkas b { display:block; font-size:22px; color:var(--ink); }
 
-  /* Navigasi: bawah di phone, sidebar di tablet */
+  /* Navigasi bawah untuk semua peranti (phone dan tablet) */
   .nav { position:fixed; left:0; right:0; bottom:0; z-index:15; background:var(--card); border-top:1px solid var(--line);
-         display:flex; padding-bottom:env(safe-area-inset-bottom); }
-  .nav button { flex:1; border:0; background:none; padding:10px 4px 9px; color:var(--muted); font-size:12px;
+         display:flex; justify-content:center; padding-bottom:env(safe-area-inset-bottom); }
+  .nav button { flex:1 1 0; max-width:180px; border:0; background:none; padding:10px 4px 9px; color:var(--muted); font-size:12px;
                 display:flex; flex-direction:column; align-items:center; gap:3px; }
   .nav button.on { color:var(--pri); font-weight:700; }
   .nav svg, .iconbtn svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
+  /* Phone kecil: jimat ruang header */
+  @media (max-width: 479px) {
+    .who .nm { display:none; }
+    .brand { font-size:17px; }
+  }
+  /* Tablet ke atas: butang nav lebih besar, kandungan lebih lebar */
   @media (min-width: 768px) {
-    #app { display:grid; grid-template-columns:220px 1fr; }
-    .nav { position:sticky; top:57px; height:calc(100vh - 57px); flex-direction:column; border-top:0; border-right:1px solid var(--line); padding:14px 10px; gap:4px; }
-    .nav button { flex:none; flex-direction:row; gap:12px; font-size:15px; padding:11px 14px; border-radius:10px; }
-    .nav button.on { background:var(--pri-soft); }
-    main { padding-bottom:32px; width:100%; }
+    .nav button { font-size:13px; padding:12px 8px 11px; }
+    .nav svg { width:24px; height:24px; }
+    main { max-width:840px; padding:24px 24px 110px; }
+    .banner { width:calc(100% - 48px); max-width:792px; margin:16px auto 0; }
+  }
+  /* Phone landscape / skrin rendah: jam lebih kecil supaya senarai murid nampak */
+  @media (max-height: 500px) {
+    .clock { padding:12px 18px; display:flex; align-items:center; justify-content:center; gap:16px; }
+    .clock .hm { font-size:48px; letter-spacing:-2px; }
+    .clock .tarikh { margin-top:0; }
+    .clock hr, .clock .nota { display:none; }
   }
 
   /* Bottom sheet */
@@ -127,10 +139,9 @@
   .chip { border:1px solid var(--line); background:#fff; border-radius:10px; padding:8px 14px; font-size:14px; }
   .chip.on { background:var(--pri); border-color:var(--pri); color:#fff; }
 
-  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:84px; z-index:40; background:var(--ink); color:#fff;
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); z-index:40; background:var(--ink); color:#fff;
            border-radius:12px; padding:12px 16px; font-size:14px; max-width:min(520px, calc(100vw - 32px)); box-shadow:0 6px 20px rgba(0,0,0,.2); }
   .toast.bad { background:var(--bad); }
-  @media (min-width: 768px) { .toast { bottom:28px; } }
 
   .skrin { max-width:400px; margin:32px auto; padding:0 16px; }
   .skrin .brand { text-align:center; font-size:26px; margin-bottom:6px; }
@@ -140,7 +151,7 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand">Semarak<span>Tepat</span></div>
+  <div class="brand">Semarak<span>LateRecord</span></div>
   <div class="who" id="who" hidden>
     <span class="nm" id="whoNama"></span>
     <span class="pill" id="whoPeranan"></span>
@@ -154,7 +165,7 @@
 
 <!-- LOGIN -->
 <form id="skrinLogin" class="skrin" hidden autocomplete="off">
-  <div class="brand">Semarak<span>Tepat</span></div>
+  <div class="brand">Semarak<span>LateRecord</span></div>
   <p class="muted c" id="lgSekolah">Rekod kelewatan murid</p>
   <div class="card">
     <h3>Log masuk</h3>
