@@ -7,8 +7,11 @@
   :root { --bg:#f5f6f8; --card:#fff; --ink:#1d2433; --muted:#667085; --line:#e3e6eb;
           --pri:#1f5fbf; --pri-ink:#fff; --ok:#13795b; --warn:#b54708; --bad:#b42318; }
   * { box-sizing:border-box; }
+  [hidden] { display:none !important; }
   body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
-  header { background:var(--pri); color:var(--pri-ink); padding:12px 16px; }
+  header { background:var(--pri); color:var(--pri-ink); padding:12px 16px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  header .btn { background:rgba(255,255,255,.15); color:var(--pri-ink); flex:none; }
+  .skrin { max-width:380px; margin:24px auto; padding:0 16px; }
   header h1 { margin:0; font-size:17px; }
   header small { opacity:.85; }
   nav { display:flex; background:var(--card); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
@@ -69,17 +72,50 @@
 </head>
 <body>
 <header>
-  <h1 id="hSekolah">Smart Late Record</h1>
-  <small id="hUser"></small>
+  <div>
+    <h1 id="hSekolah">Smart Late Record</h1>
+    <small id="hUser"></small>
+  </div>
+  <button class="btn sm" id="btnKeluar" hidden>Log keluar</button>
 </header>
 <div id="loading">Memuatkan...</div>
+
+<!-- LOGIN -->
+<form id="skrinLogin" class="skrin" hidden autocomplete="off">
+  <div class="card">
+    <h2>Log masuk</h2>
+    <label for="lgId">ID pengguna</label>
+    <input id="lgId" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Contoh: PGW001">
+    <label for="lgPin">PIN (6 digit)</label>
+    <input id="lgPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+    <button class="btn full" id="btnLogin" style="margin-top:12px">Masuk</button>
+    <div id="msgLogin"></div>
+    <p class="muted">Guna peranti kongsi? Tekan Log keluar selepas guna dan jangan simpan PIN dalam pelayar.</p>
+  </div>
+</form>
+
+<!-- TUKAR PIN -->
+<form id="skrinTukarPin" class="skrin" hidden autocomplete="off">
+  <div class="card">
+    <h2>Tukar PIN</h2>
+    <p class="muted" style="margin-top:0">Anda perlu tukar PIN sementara sebelum guna sistem.</p>
+    <label for="tpLama">PIN semasa</label>
+    <input id="tpLama" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+    <label for="tpBaru">PIN baru (6 digit)</label>
+    <input id="tpBaru" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+    <label for="tpSah">Ulang PIN baru</label>
+    <input id="tpSah" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+    <button class="btn full" id="btnTukarPin" style="margin-top:12px">Simpan PIN baru</button>
+    <div id="msgTukarPin"></div>
+  </div>
+</form>
 
 <div id="app" hidden>
   <nav class="no-print">
     <button data-tab="rekod" class="on">Rekod</button>
     <button data-tab="hariini">Hari Ini</button>
     <button data-tab="laporan" id="navLaporan" hidden>Laporan</button>
-    <button data-tab="murid" id="navMurid" hidden>Murid</button>
+    <button data-tab="murid" id="navMurid" hidden>Pelajar</button>
   </nav>
 
   <main>
@@ -220,16 +256,25 @@
 </dialog>
 
 <script>
-const S = { init: null, pilih: new Map(), hariIni: [], laporan: null, editId: null };
+// Token sesi disimpan dalam memori sahaja (bukan localStorage). Refresh halaman = log masuk semula.
+const S = { token: null, idleMs: 0, tamatMs: 0, akhir: 0, init: null, pilih: new Map(), hariIni: [], laporan: null, editId: null };
 const $ = id => document.getElementById(id);
 
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
-function call(fn, ...args) {
+function run(fn, args) {
   return new Promise((resolve, reject) =>
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
 }
+// Panggilan yang perlu sesi: token dihantar sebagai argumen pertama
+function call(fn, ...args) {
+  return run(fn, [S.token, ...args]).then(r => { S.akhir = Date.now(); return r; }, e => {
+    if (sesiTamat(e)) keluarUI(e.message);
+    throw e;
+  });
+}
+function sesiTamat(e) { return String(e && e.message || e).includes('Sesi tamat'); }
 function msg(el, type, html) { el.innerHTML = html ? `<div class="msg ${type}">${html}</div>` : ''; }
 function fmtD(iso) { return iso ? iso.split('-').reverse().join('/') : ''; }
 function isoLocal(d) {
@@ -240,23 +285,97 @@ function options(sel, list, first) {
     list.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
 }
 
+// ---------- Login & sesi ----------
+const LABEL_PERANAN = { PENGAWAS: 'Pengawas', GURU: 'Guru disiplin', ADMIN: 'Admin' };
+
+$('skrinLogin').addEventListener('submit', async e => {
+  e.preventDefault();
+  const el = $('msgLogin'), btn = $('btnLogin');
+  const id = $('lgId').value.trim(), pin = $('lgPin').value;
+  if (!id || !pin) return msg(el, 'bad', 'Isi ID dan PIN.');
+  btn.disabled = true; msg(el, '', '');
+  try {
+    const r = await run('logMasuk', [id, pin]);
+    S.token = r.token;
+    S.idleMs = r.idleSaat * 1000;
+    S.tamatMs = r.tamatSaat ? Date.now() + r.tamatSaat * 1000 : 0;
+    S.akhir = Date.now();
+    $('lgPin').value = '';
+    $('skrinLogin').hidden = true;
+    $('btnKeluar').hidden = false;
+    if (r.perluTukarPin) { $('skrinTukarPin').hidden = false; $('tpLama').focus(); }
+    else mula();
+  } catch (err) {
+    $('lgPin').value = '';
+    msg(el, 'bad', esc(err.message));
+  } finally { btn.disabled = false; }
+});
+
+$('skrinTukarPin').addEventListener('submit', async e => {
+  e.preventDefault();
+  const el = $('msgTukarPin'), btn = $('btnTukarPin');
+  const lama = $('tpLama').value, baru = $('tpBaru').value;
+  if (!/^\d{6}$/.test(baru)) return msg(el, 'bad', 'PIN baru mesti 6 digit nombor.');
+  if (baru !== $('tpSah').value) return msg(el, 'bad', 'PIN baru tidak sama.');
+  btn.disabled = true; msg(el, '', '');
+  try {
+    await call('tukarPin', lama, baru);
+    ['tpLama', 'tpBaru', 'tpSah'].forEach(id => $(id).value = '');
+    $('skrinTukarPin').hidden = true;
+    mula();
+  } catch (err) { msg(el, 'bad', esc(err.message)); }
+  finally { btn.disabled = false; }
+});
+
+$('btnKeluar').addEventListener('click', () => {
+  if (S.token) run('logKeluar', [S.token]).catch(() => {});
+  keluarUI();
+});
+
+// Kosongkan semua data dari skrin dan kembali ke login
+function keluarUI(pesan) {
+  S.token = null; S.init = null; S.hariIni = []; S.laporan = null; S.murid = null; S.csv = null;
+  S.pilih.clear();
+  ['senaraiKelas', 'hasilCari', 'tblHariIni', 'hasilLaporan', 'tblMurid', 'csvPreview',
+    'msgRekod', 'msgLaporan', 'msgMurid', 'msgTukarPin'].forEach(id => $(id).innerHTML = '');
+  ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'catatan'].forEach(id => $(id).value = '');
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  renderChips();
+  document.querySelector('nav button[data-tab="rekod"]').click();
+  $('app').hidden = true; $('skrinTukarPin').hidden = true; $('btnKeluar').hidden = true;
+  $('hUser').textContent = '';
+  $('skrinLogin').hidden = false;
+  msg($('msgLogin'), 'bad', pesan ? esc(pesan) : '');
+}
+
+// Paparan sahaja: server tetap tamatkan sesi sendiri walaupun semakan ini tak berjalan
+setInterval(() => {
+  if (!S.token) return;
+  const now = Date.now();
+  if (now - S.akhir > S.idleMs || (S.tamatMs && now >= S.tamatMs)) {
+    run('logKeluar', [S.token]).catch(() => {});
+    keluarUI('Sesi tamat. Sila log masuk semula.');
+  }
+}, 10000);
+
 // ---------- Init ----------
 function mula() {
 call('getInit').then(d => {
   S.init = d;
   $('hSekolah').textContent = d.config.sekolah;
-  $('hUser').textContent = `${d.user.nama} · ${d.user.peranan}`;
+  $('hUser').textContent = `${d.user.nama} · ${d.user.id} · ${LABEL_PERANAN[d.user.peranan] || d.user.peranan}`;
   options($('sebab'), d.sebab, '-- Pilih sebab --');
   options($('edSebab'), d.sebab);
   options($('fSebab'), d.sebab, 'Semua');
   $('fHad').value = d.config.hadKerap;
-  if (d.user.peranan === 'ADMIN') { $('navLaporan').hidden = false; $('navMurid').hidden = false; }
+  $('navLaporan').hidden = !['GURU', 'ADMIN'].includes(d.user.peranan);
+  $('navMurid').hidden = d.user.peranan !== 'ADMIN';
   setKelas(d.kelas);
   setTempoh('bulan');
-  $('loading').remove();
   $('app').hidden = false;
-  jam(); setInterval(jam, 1000);
-}).catch(e => { $('loading').textContent = e.message; });
+  jam();
+  if (!S.jamTimer) S.jamTimer = setInterval(jam, 1000);
+}).catch(e => { if (!sesiTamat(e)) keluarUI(e.message); });
 }
 
 // ---------- Tab ----------
@@ -269,13 +388,14 @@ document.querySelectorAll('nav button').forEach(b => b.addEventListener('click',
 
 // ---------- Jam (paparan sahaja; masa sebenar diambil di server) ----------
 function jam() {
+  if (!S.init) return;
   const d = new Date();
   $('jam').textContent = d.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', hour12: false });
   const [h, m] = S.init.config.waktuLewat.split(':').map(Number);
   const lewat = d.getHours() * 60 + d.getMinutes() - (h * 60 + m);
   const t = $('statusLewat');
-  t.textContent = lewat >= 0 ? `Lewat ${lewat} minit` : `Belum ${S.init.config.waktuLewat}`;
-  t.className = 'tag ' + (lewat >= 0 ? 'warn' : '');
+  t.textContent = lewat > 0 ? `Lewat ${lewat} minit` : `Belum lewat (had ${S.init.config.waktuLewat})`;
+  t.className = 'tag ' + (lewat > 0 ? 'warn' : '');
 }
 
 // ---------- Pilih murid ----------
@@ -616,12 +736,18 @@ function downloadCsv() {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-// Dalam Apps Script terus mula. Di luar (contoh GitHub Pages) guna mod demo.
-if (window.google && google.script) mula();
+// Tiada data dimuat sebelum login berjaya
+function tunjukLogin() {
+  $('loading').remove();
+  $('skrinLogin').hidden = false;
+  $('lgId').focus();
+}
+// Dalam Apps Script terus ke login. Di luar (contoh GitHub Pages) guna mod demo.
+if (window.google && google.script) tunjukLogin();
 else {
   const sc = document.createElement('script');
   sc.src = 'demo.js';
-  sc.onerror = () => { $('loading').textContent = 'Gagal muat demo.js'; };
+  sc.onerror = () => { $('loading').textContent = 'Sistem ini hanya boleh dibuka melalui URL web app sekolah.'; };
   document.body.appendChild(sc);
 }
 </script>
