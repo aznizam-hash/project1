@@ -158,7 +158,7 @@
       }),
       getLastRow: () => rows.length,
       getRange: (r, c, nr, nc) => ({
-        setValues: v => tulis(r, c, v), setValue: v => tulis(r, c, [[v]]),
+        setValues: v => tulis(r, c, v), setValue: v => tulis(r, c, [[v]]), setNumberFormat() {},
         getValues: () => rows.slice(r - 1, r - 1 + (nr || 1)).map(x => x.slice(c - 1, c - 1 + (nc || 1)).map(keluar))
       }),
       copyTo: () => ({ setName: n => { db[n] = rows.map(x => x.slice()); save(); } }),

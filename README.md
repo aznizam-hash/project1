@@ -105,7 +105,7 @@ Tab **Pelajar** dalam web app:
 - **Edit pelajar:** ketik nama dalam senarai untuk ubah nama, tingkatan, kelas atau status. ID kekal, jadi rekod lama masih di bawah pelajar yang sama. Perubahan direkod dalam `LogAudit`.
 - **Pindah atau berhenti:** tekan butang status **Aktif** (atau Edit) untuk tukar jadi tidak aktif. Rekod lama kekal dalam laporan.
 - **Import CSV:** muat turun template, isi dalam Excel, Save As **CSV UTF-8**, kemudian pilih fail.
-  - Lajur wajib: `Nama, Tingkatan, Kelas` (Tingkatan 1 hingga 5, Kelas contoh `Amanah`).
+  - Lajur wajib: `Nama, Tingkatan, Kelas` (Tingkatan 1 hingga 6, Kelas contoh `Amanah`).
   - Sistem semak dulu. Jika ada satu baris bermasalah, **tiada apa disimpan** dan senarai ralat dipaparkan.
   - Jika fail ada lajur `ID_Murid` (dari butang Eksport), baris yang ada ID dipadankan ikut ID dan nama/tingkatan/kelas dikemas kini. Baris tanpa ID dipadankan ikut nama + tingkatan + kelas, atau ditambah sebagai pelajar baharu. Pelajar yang **tiada dalam fail ditanda tidak aktif** (tidak dipadam). Jadi fail mesti senarai penuh semua kelas.
   - Sebelum simpan, tab `Murid` dibackup ke tab baharu `Murid_backup_<tarikh>`.

@@ -315,7 +315,11 @@ function simpanRekod(token, idMurid, sebab) {
       ID_Pengguna: user.id, Sebab: sebab, Lewat: lewat ? 'ya' : 'tidak',
       Status: lewat ? 'menunggu semakan' : '', Dibatalkan: 'tidak'
     };
-    sheet_(TAB.REKOD).appendRow(HEADERS.Rekod.map(function (h) { return row[h] === undefined ? '' : row[h]; }));
+    // Tulis sebagai teks supaya Sheets tidak menukar Tarikh dan Masa_Tiba kepada format tarikh/masa
+    const sh = sheet_(TAB.REKOD);
+    const julat = sh.getRange(sh.getLastRow() + 1, 1, 1, HEADERS.Rekod.length);
+    julat.setNumberFormat('@');
+    julat.setValues([HEADERS.Rekod.map(function (h) { return row[h] === undefined ? '' : row[h]; })]);
     log_(user.id, 'REKOD_DIBUAT', id + ' ' + idMurid + (lewat ? ' (lewat)' : ' (tidak lewat)'));
 
     const bulan = t.tarikh.slice(0, 7);
@@ -913,7 +917,7 @@ function normMurid_(nama, tingkatan, kelas, semua) {
   const t = String(tingkatan == null ? '' : tingkatan).trim();
   if (!nama) throw new Error('Nama wajib diisi.');
   if (nama.length > 150) throw new Error('Nama terlalu panjang (maks 150 aksara).');
-  if (!/^[1-5]$/.test(t)) throw new Error('Tingkatan mesti 1 hingga 5.');
+  if (!/^[1-6]$/.test(t)) throw new Error('Tingkatan mesti 1 hingga 6 (diterima: "' + t.slice(0, 20) + '").');
   if (!kelas) throw new Error('Kelas wajib diisi.');
   if (kelas.length > 30) throw new Error('Nama kelas terlalu panjang (maks 30 aksara).');
   const sedia = (semua || []).find(function (m) { return m.kelas.toLowerCase() === kelas.toLowerCase(); });

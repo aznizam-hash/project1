@@ -248,7 +248,7 @@
         <input id="mNama" maxlength="150" placeholder="Contoh: Ahmad bin Ali">
         <div class="row">
           <div><label class="f" for="mTing">Tingkatan</label>
-            <select id="mTing"><option value="">Pilih</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+            <select id="mTing"><option value="">Pilih</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
           <div><label class="f" for="mKelas">Kelas</label><input id="mKelas" list="dlKelas" maxlength="30" placeholder="Contoh: Amanah"></div>
         </div>
         <button class="btn" id="btnTambahMurid">Tambah pelajar</button>
@@ -384,7 +384,9 @@ function esc(s) {
 }
 function run(fn, args) {
   return new Promise((resolve, reject) =>
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args));
+    google.script.run.withSuccessHandler(resolve)
+      // Apps Script sebenar menambah "Error: " di depan mesej, buang supaya mesej kekal mesra pengguna
+      .withFailureHandler(e => reject(new Error(String(e && e.message || e).replace(/^(\w*Error:\s*)+/, ''))))[fn](...args));
 }
 // Panggilan yang perlu sesi: token dihantar sebagai argumen pertama
 function call(fn, ...args) {
@@ -745,7 +747,7 @@ function bukaSheetMurid(m) {
   bukaSheet(`<h3>Edit pelajar</h3><div class="muted">${esc(m.id)} · ID kekal, rekod lama tidak terjejas</div>
     <label class="f" for="emNama">Nama penuh</label><input id="emNama" maxlength="150" value="${esc(m.nama)}">
     <div class="row">
-      <div><label class="f" for="emTing">Tingkatan</label><select id="emTing">${[1, 2, 3, 4, 5].map(t =>
+      <div><label class="f" for="emTing">Tingkatan</label><select id="emTing">${[1, 2, 3, 4, 5, 6].map(t =>
         `<option${String(t) === String(m.tingkatan) ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
       <div><label class="f" for="emKelas">Kelas</label><input id="emKelas" list="dlKelas" maxlength="30" value="${esc(m.kelas)}"></div>
     </div>
