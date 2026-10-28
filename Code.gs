@@ -12,7 +12,7 @@
  */
 
 const CONFIG = {
-  NAMA_SEKOLAH: 'NAMA SEKOLAH ANDA',
+  NAMA_SEKOLAH: 'SMK Mengkarak',
   ZON_WAKTU: 'Asia/Kuala_Lumpur',
   MAKS_HARI_LAPORAN: 366,
   MAKS_IMPORT: 3000,
