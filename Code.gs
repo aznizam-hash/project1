@@ -476,10 +476,37 @@ function getRekodHariIni(token) {
     return {
       id: r.id, masa: r.masa.slice(0, 5), nama: nama[r.idMurid] || r.idMurid, idMurid: r.idMurid,
       kelas: r.kelas, sebab: r.sebab, lewat: r.lewat, status: r.status, oleh: r.oleh,
+      catatanDisiplin: r.catatanDisiplin, tarikh: r.tarikh,
       bolehBatal: sendiri || user.peranan === 'ADMIN',
-      perluCatatan: !sendiri && user.peranan === 'ADMIN'
+      perluCatatan: !sendiri && user.peranan === 'ADMIN',
+      bolehSemak: user.peranan !== 'PENGAWAS' && r.lewat
     };
   }).reverse();
+}
+
+// Guru disiplin atau admin tandakan rekod lewat: sah atau dinaikkan. Catatan kosong = kekalkan catatan lama.
+function semakRekod(token, idRekod, status, catatan) {
+  const user = requireUser_(token, ['GURU', 'ADMIN']);
+  status = String(status || '').trim();
+  if (status !== 'sah' && status !== 'dinaikkan') throw new Error('Tindakan mesti sah atau dinaikkan.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const r = readRekod_().find(function (x) { return x.id === String(idRekod); });
+    if (!r) throw new Error('Rekod tidak dijumpai.');
+    if (r.batal) throw new Error('Rekod ini sudah dibatalkan.');
+    if (!r.lewat) throw new Error('Hanya rekod lewat boleh disemak.');
+    const c = clean_(catatan, 200) || r.catatanDisiplin;
+    const cols = HEADERS.Rekod.indexOf('Status') + 1;
+    const sh = sheet_(TAB.REKOD);
+    const julat = sh.getRange(r._row, cols, 1, 4);
+    julat.setNumberFormat('@');
+    julat.setValues([[status, c, user.id, fmt_(new Date(), 'yyyy-MM-dd HH:mm:ss')]]);
+    log_(user.id, 'REKOD_SEMAK', r.id + ' -> ' + status + (c ? ': ' + c : ''));
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Rekod tidak dipadam, cuma ditanda dibatalkan.
@@ -545,8 +572,8 @@ function getLaporan(token, p) {
     kerap: kerap.slice(0, 20),
     melepasiHad: bulanIni,
     list: list.map(function (r) {
-      return { tarikh: r.tarikh, masa: r.masa.slice(0, 5), idMurid: r.idMurid, nama: nama[r.idMurid] || r.idMurid,
-        kelas: r.kelas, sebab: r.sebab, status: r.status, oleh: r.oleh };
+      return { id: r.id, tarikh: r.tarikh, masa: r.masa.slice(0, 5), idMurid: r.idMurid, nama: nama[r.idMurid] || r.idMurid,
+        kelas: r.kelas, sebab: r.sebab, status: r.status, catatanDisiplin: r.catatanDisiplin, oleh: r.oleh };
     })
   };
 }
@@ -1030,6 +1057,7 @@ function readRekod_() {
       sebab: String(r.Sebab),
       lewat: String(r.Lewat).trim().toLowerCase() === 'ya',
       status: String(r.Status),
+      catatanDisiplin: String(r.Catatan_Disiplin || ''),
       batal: String(r.Dibatalkan).trim().toLowerCase() === 'ya',
       _row: r._row
     };
