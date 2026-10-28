@@ -22,7 +22,7 @@ Akaun demo (PIN semua `246810`): `ADM001` (admin), `GRU001` (guru disiplin), `PG
 |---|---|---|
 | Pengawas | PGW001, PGW002, ... | Rekod, Hari ini (rekod sendiri sahaja). Login hanya dalam waktu bertugas |
 | Guru disiplin | GRU001, ... | Rekod, Hari ini, Laporan |
-| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan, Pengguna |
+| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan, Tetapan (Pengguna dan Sistem) |
 
 ## Langkah setup (sekali sahaja, ~20 minit)
 
@@ -38,7 +38,7 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
    - Tab `Murid`, `Rekod`, `Pengguna`, `Tetapan` dan `LogAudit` akan dibuat. Tab versi lama (contoh `MURID` dengan No. Daftar) ditukar nama jadi `..._LAMA`, tidak dipadam.
    - Akaun admin pertama (`ADM001`) dicipta. **Catat PIN sementara yang dipaparkan.** Ia tak akan dipaparkan lagi.
 8. **Tambah pengguna:** login ke web app sebagai `ADM001`, buka tab **Pengguna**. (Atau guna menu **SemarakLateRecord > 2. Tambah pengguna** dalam Sheet.) ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
-9. Semak tab `Tetapan` (waktu bertugas pengawas, had lewat, had tindakan, senarai sebab). Buat masa ni nilai diubah terus dalam Sheet. Borang tetapan dalam web app akan datang.
+9. Semak tetapan dalam web app: tab **Tetapan > Sistem** (waktu bertugas pengawas, had lewat, had tindakan, senarai sebab).
 10. **Data murid:** untuk ujian, guna **4. Masukkan murid olok-olok**. Jangan guna data murid sebenar sehingga semua ujian peranan dan import lulus.
 11. **Deploy:** dalam Apps Script, pergi ke **Deploy > New deployment > Web app**.
     - Execute as: **Me**
@@ -59,12 +59,25 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 
 ## Urus pengguna (admin)
 
-Tab **Pengguna** dalam web app:
+Tab **Tetapan > Pengguna** dalam web app:
 - **Tambah pengguna:** nama dan peranan. ID (`PGW001`, `GRU001`, `ADM001`, ...) dijana ikut peranan. PIN sementara dipaparkan sekali sahaja.
 - **Reset PIN:** ketik pengguna, tekan Reset PIN. PIN sementara baharu dipaparkan sekali, dan akaun yang dikunci dibuka.
 - **Aktif / tidak aktif:** pengguna yang dijadikan tidak aktif terus dilog keluar dan tak boleh login. Pengguna tak dipadam supaya rekod lama masih menunjukkan siapa yang merekod.
 - Admin tak boleh ubah akaun sendiri dalam web app.
 - Hash PIN dan salt tidak pernah dihantar ke pelayar.
+
+## Tetapan sistem (admin)
+
+Tab **Tetapan > Sistem** dalam web app. Tiada perubahan kod diperlukan.
+
+| Tetapan | Nilai asal | Kesan |
+|---|---|---|
+| Waktu bertugas pengawas | 07:00 hingga 09:00 | Pengawas hanya boleh login dalam tempoh ini. Sesi pengawas yang sedang aktif tamat terus jika waktu tamat diawalkan. |
+| Had lewat | 07:20 | Selepas masa ini dikira lewat. Tepat pada masa ini tidak lewat. |
+| Had tindakan sebulan | 3 | Bilangan lewat sebulan untuk senarai "Capai had tindakan" dalam Laporan. |
+| Sebab lewat | 5 pilihan | Pilihan semasa merekod (maks 15, tiada koma). Rekod lama tidak berubah. |
+
+Semua nilai disemak sebelum disimpan. Jika satu tidak sah, tiada apa disimpan. Setiap perubahan direkod dalam `LogAudit` (nilai lama dan baharu).
 
 ## Rekod kelewatan
 
@@ -130,7 +143,8 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Guru disiplin tidak boleh batal rekod pengawas. Admin boleh, dengan catatan.
 - [ ] Import CSV dengan satu baris rosak: tiada apa disimpan. Import fail betul: tab backup dicipta.
 - [ ] Edit seorang pelajar (tukar kelas): ID sama, rekod lama masih ada dalam laporan.
-- [ ] Tab Pengguna: tambah pengguna, reset PIN, jadikan tidak aktif. Pengguna tidak aktif terus dilog keluar.
+- [ ] Tab Tetapan > Pengguna: tambah pengguna, reset PIN, jadikan tidak aktif. Pengguna tidak aktif terus dilog keluar.
+- [ ] Tab Tetapan > Sistem: tukar had lewat, kemudian rekod murid. Status lewat ikut had baharu.
 - [ ] Eksport, tukar kelas dalam Excel, import semula: ID kekal dan kelas baru dipaparkan.
 - [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
 
