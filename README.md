@@ -159,7 +159,13 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 
 - **Backup:** menu **SemarakLateRecord > 5. Pasang backup mingguan**. Salinan Sheet dibuat setiap Isnin jam 2 pagi dalam folder Drive yang sama. Jalankan sekali sahaja. Sebelum import murid, tab `Murid` juga dibackup automatik.
 - **Tempoh simpanan:** 2 tahun dari tarikh rekod. Rekod, dan salinan backup yang mengandungi rekod tu, dipadam bila tempoh tamat. Admin yang buat pemadaman. Tempoh ni cadangan, belum disahkan dengan arahan KPM atau pegawai PDPA sekolah.
-- **Cara padam:** setiap awal tahun, admin buat salinan arkib Sheet, kemudian padam baris `Rekod` dan `LogAudit` yang lebih 2 tahun. Dalam Drive, padam juga salinan backup yang lebih 2 tahun. Simpan rekod pemadaman dalam buku log luar.
+- **Pemadaman automatik:** pasang sekali dengan menu **SemarakLateRecord > 7. Pasang pemadaman automatik**. Setiap bulan (tarikh 1, jam 3 pagi):
+  - Baris `Rekod` dan `LogAudit` yang lebih 2 tahun dipadam terus dari Sheet.
+  - Salinan backup yang lebih 2 tahun dipindah ke **Trash** Drive. Boleh dipulihkan dalam 30 hari, lepas tu dipadam kekal oleh Drive.
+  - Satu entri `PEMADAMAN_AUTO` dicatat dalam `LogAudit` dengan jumlah yang dipadam.
+- **Semak dulu:** menu **6. Semak data yang akan dipadam** tunjuk jumlah tanpa padam apa-apa. Guna menu ni sebelum tunggu bulan pertama.
+- **Sebelum pemadaman pertama:** buat salinan Sheet secara manual sebagai arkib (File > Make a copy), dan simpan di tempat yang selamat.
+- Pemadaman dalam Sheet tak boleh diundur. Data yang dipadam hanya boleh dipulihkan dari salinan arkib atau backup dalam Trash.
 - **Skop data:** sistem ni hanya merekod kehadiran lewat. Tiada integrasi dengan MOEIS. Tiada nombor rasmi murid digunakan.
 
 ## Nota PDPA
