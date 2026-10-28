@@ -81,6 +81,7 @@
   .tag.bad { background:var(--bad-soft); color:var(--bad); }
   .tag.ok { background:var(--ok-soft); color:var(--ok); }
   button.tag { border:0; }
+  .item button.txt { border:0; background:none; padding:0; text-align:left; cursor:pointer; }
 
   .msg { padding:10px 12px; border-radius:10px; margin-top:12px; font-size:14px; }
   .msg.bad { background:var(--bad-soft); color:var(--bad); }
@@ -251,8 +252,11 @@
         <p class="muted">Lajur: <b>Nama, Tingkatan, Kelas</b>. Jika ada satu baris bermasalah, tiada apa yang disimpan sehingga fail dibetulkan.</p>
         <input id="csvFail" type="file" accept=".csv,text/csv" hidden>
         <button class="btn sec" id="btnPilihCsv" type="button">Pilih fail CSV</button>
-        <p class="muted">Dari Excel: File &gt; Save As &gt; <b>CSV UTF-8</b>. Pelajar sedia ada dipadankan ikut nama, tingkatan dan kelas.
-          Pelajar yang tiada dalam fail akan ditanda tidak aktif (tidak dipadam). <button class="link" id="btnTemplate" type="button">Muat turun template</button></p>
+        <p class="muted">Dari Excel: File &gt; Save As &gt; <b>CSV UTF-8</b>. Pelajar yang tiada dalam fail akan ditanda tidak aktif (tidak dipadam).
+          <button class="link" id="btnTemplate" type="button">Muat turun template</button></p>
+        <p class="muted"><b>Awal tahun (kelas disusun semula):</b> eksport senarai, tukar Tingkatan dan Kelas dalam Excel, kemudian import semula.
+          Lajur <b>ID_Murid</b> mengekalkan ID dan rekod lama. Pelajar baharu: biarkan ID kosong.</p>
+        <button class="btn sec" id="btnEksportMurid" type="button">Eksport senarai pelajar</button>
         <div id="csvHasil"></div>
       </div>
 
@@ -545,6 +549,7 @@ $('sheet').addEventListener('click', async e => {
   }
   if (e.target.id === 'shRekod') return uiSimpanRekod();
   if (e.target.id === 'shBatalRekod') return uiBatalRekod();
+  if (e.target.id === 'shSimpanMurid') return uiSimpanMurid();
 });
 
 async function uiSimpanRekod() {
@@ -625,7 +630,7 @@ function renderPelajar() {
   $('bilPelajar').textContent = `${list.length} pelajar`;
   const papar = list.slice(0, 200);
   $('senaraiPelajar').innerHTML = papar.length ? papar.map(m => `<div class="item${m.aktif ? '' : ' mati'}">
-      <span class="txt"><span class="nm">${esc(m.nama)}</span><span class="sub"> ${esc(m.label)} · ${esc(m.id)}</span></span>
+      <button class="txt" data-edit="${esc(m.id)}" title="Edit"><span class="nm">${esc(m.nama)}</span><span class="sub"> ${esc(m.label)} · ${esc(m.id)}</span></button>
       <button class="tag ${m.aktif ? 'ok' : ''}" data-status="${esc(m.id)}">${m.aktif ? 'Aktif' : 'Tidak aktif'}</button></div>`).join('') +
     (list.length > papar.length ? `<div class="kosong">Tunjuk ${papar.length} pertama. Guna carian atau tapis kelas.</div>` : '')
     : '<div class="kosong">Tiada pelajar.</div>';
@@ -634,6 +639,8 @@ $('pfKelas').addEventListener('change', renderPelajar);
 $('pfCari').addEventListener('input', renderPelajar);
 
 $('senaraiPelajar').addEventListener('click', async e => {
+  const ed = e.target.closest('[data-edit]');
+  if (ed) return bukaSheetMurid(S.pelajar.find(x => x.id === ed.dataset.edit));
   const b = e.target.closest('[data-status]');
   if (!b) return;
   const m = S.pelajar.find(x => x.id === b.dataset.status);
@@ -645,6 +652,37 @@ $('senaraiPelajar').addEventListener('click', async e => {
     m.aktif = jadi; setKelas(r.senaraiKelas); renderPelajar();
   } catch (err) { if (!sesiTamat(err)) { b.disabled = false; toast(err.message, true); } }
 });
+
+function bukaSheetMurid(m) {
+  S.sheetMurid = m;
+  bukaSheet(`<h3>Edit pelajar</h3><div class="muted">${esc(m.id)} · ID kekal, rekod lama tidak terjejas</div>
+    <label class="f" for="emNama">Nama penuh</label><input id="emNama" maxlength="150" value="${esc(m.nama)}">
+    <div class="row">
+      <div><label class="f" for="emTing">Tingkatan</label><select id="emTing">${[1, 2, 3, 4, 5].map(t =>
+        `<option${String(t) === String(m.tingkatan) ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div><label class="f" for="emKelas">Kelas</label><input id="emKelas" list="dlKelas" maxlength="30" value="${esc(m.kelas)}"></div>
+    </div>
+    <label class="f" for="emStatus">Status</label>
+    <select id="emStatus"><option value="1"${m.aktif ? ' selected' : ''}>Aktif</option>
+      <option value="0"${m.aktif ? '' : ' selected'}>Tidak aktif (pindah / berhenti / tamat)</option></select>
+    <button class="btn" id="shSimpanMurid">Simpan</button>
+    <button class="btn sec" data-tutup>Batal</button>
+    <div id="shMsg"></div>`);
+}
+
+async function uiSimpanMurid() {
+  const m = S.sheetMurid, btn = $('shSimpanMurid');
+  const input = { nama: $('emNama').value.trim(), tingkatan: $('emTing').value, kelas: $('emKelas').value.trim(), aktif: $('emStatus').value === '1' };
+  if (!input.nama || !input.kelas) return msg($('shMsg'), 'bad', 'Isi nama dan kelas.');
+  btn.disabled = true;
+  try {
+    const r = await call('kemaskiniMurid', m.id, input);
+    setKelas(r.senaraiKelas);
+    tutupSheet();
+    toast(`${input.nama} dikemas kini.`);
+    muatPelajar();
+  } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
+}
 
 $('formMurid').addEventListener('submit', async e => {
   e.preventDefault();
@@ -696,6 +734,21 @@ function muatTurun(nama, teks) {
 $('btnTemplate').addEventListener('click', () => muatTurun('template-pelajar.csv', 'Nama,Tingkatan,Kelas\r\nContoh Nama Pelajar,1,Amanah\r\n'));
 $('btnPilihCsv').addEventListener('click', () => $('csvFail').click());
 
+// Eksport pelajar aktif dengan ID, untuk diedit dalam Excel dan diimport semula
+$('btnEksportMurid').addEventListener('click', async () => {
+  try {
+    if (!S.pelajar.length) S.pelajar = await call('getSenaraiMurid');
+    const rows = [['ID_Murid', 'Nama', 'Tingkatan', 'Kelas']]
+      .concat(S.pelajar.filter(m => m.aktif).map(m => [m.id, m.nama, m.tingkatan, m.kelas]));
+    const teks = rows.map(r => r.map(v => {
+      let x = String(v == null ? '' : v);
+      if (/^[=+\-@\t\r]/.test(x)) x = "'" + x;
+      return '"' + x.replace(/"/g, '""') + '"';
+    }).join(',')).join('\r\n');
+    muatTurun(`senarai-pelajar_${jamKL().iso}.csv`, teks);
+  } catch (e) { if (!sesiTamat(e)) toast(e.message, true); }
+});
+
 $('csvFail').addEventListener('change', () => {
   const f = $('csvFail').files[0], box = $('csvHasil');
   S.csv = null; box.innerHTML = '';
@@ -716,8 +769,9 @@ $('csvFail').addEventListener('change', () => {
       }
       S.csv = rows;
       box.innerHTML = `<div class="ringkas">
-          <div><b>${r.baru}</b>Pelajar baharu</div><div><b>${r.kekal}</b>Kekal</div>
+          <div><b>${r.baru}</b>Pelajar baharu</div><div><b>${r.kemaskini}</b>Dikemas kini</div><div><b>${r.kekal}</b>Kekal</div>
           <div><b>${r.aktifSemula}</b>Aktif semula</div><div><b>${r.tidakAktif}</b>Jadi tidak aktif</div></div>
+        ${r.kemaskini ? `<p class="muted">Dikemas kini: ${r.contohKemaskini.map(esc).join(', ')}${r.kemaskini > 10 ? ', ...' : ''}</p>` : ''}
         ${r.tidakAktif ? `<p class="muted">Akan jadi tidak aktif: ${r.contohTidakAktif.map(esc).join(', ')}${r.tidakAktif > 10 ? ', ...' : ''}</p>` : ''}
         ${r.amaran ? `<div class="msg warn">${esc(r.amaran)}</div>` : ''}
         <button class="btn" id="btnSimpanImport">Simpan import</button>
@@ -734,7 +788,7 @@ $('csvHasil').addEventListener('click', async e => {
     const r = await call('simpanImportMurid', S.csv);
     S.csv = null;
     setKelas(r.senaraiKelas);
-    msg($('csvHasil'), 'ok', `Import selesai. Baharu ${r.baru}, kekal ${r.kekal}, aktif semula ${r.aktifSemula}, tidak aktif ${r.tidakAktif}. Backup: ${esc(r.backup)}`);
+    msg($('csvHasil'), 'ok', `Import selesai. Baharu ${r.baru}, dikemas kini ${r.kemaskini}, kekal ${r.kekal}, aktif semula ${r.aktifSemula}, tidak aktif ${r.tidakAktif}. Backup: ${esc(r.backup)}`);
     muatPelajar();
   } catch (err) { if (!sesiTamat(err)) msg($('csvHasil'), 'bad', esc(err.message)); }
 });
