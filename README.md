@@ -1,4 +1,4 @@
-# SMART LATE RECORD — Panduan Setup
+# Semarak Tepat — Panduan Setup
 
 Sistem rekod kelewatan murid. Guna Google Sheets + Apps Script. Pengguna login dengan **ID dan PIN 6 digit** (contoh `PGW001`), bukan akaun Google.
 
@@ -22,24 +22,24 @@ Akaun demo (PIN semua `246810`): `ADM001` (admin), `GRU001` (guru disiplin), `PG
 |---|---|---|
 | Pengawas | PGW001, PGW002, ... | Rekod, Hari ini (rekod sendiri sahaja). Login hanya dalam waktu bertugas |
 | Guru disiplin | GRU001, ... | Rekod, Hari ini, Laporan |
-| Admin | ADM001, ... | Rekod, Hari ini, Laporan, Pelajar |
+| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan |
 
 ## Langkah setup (sekali sahaja, ~20 minit)
 
 Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Apps Script mesti dimiliki akaun sekolah.
 
-1. **Buat Google Sheet baru**. Namakan `Smart Late Record`.
+1. **Buat Google Sheet baru**. Namakan `Semarak Tepat`.
 2. Dalam Sheet tu, buka **Extensions > Apps Script**.
 3. Padam kod dalam `Code.gs`, kemudian paste isi fail `Code.gs`.
 4. Klik **+ > HTML**, namakan `Index` (huruf besar I, tanpa .html), kemudian paste isi `index.html`.
-5. Dalam `Code.gs`, edit bahagian `CONFIG`: `NAMA_SEKOLAH`, `KOD_SEKOLAH`, dan `LOGO_URL` kalau ada. Lepas tu tekan Save.
-6. Kembali ke Sheet dan refresh. Menu **Smart Late Record** akan muncul.
-7. Klik **Smart Late Record > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
-   - Tab `MURID`, `REKOD`, `Pengguna`, `Tetapan`, `LogAudit` dan `IMPORT_APDM` akan dibuat.
+5. Dalam `Code.gs`, edit `NAMA_SEKOLAH` dalam bahagian `CONFIG`. Lepas tu tekan Save.
+6. Kembali ke Sheet dan refresh. Menu **Semarak Tepat** akan muncul.
+7. Klik **Semarak Tepat > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
+   - Tab `Murid`, `Rekod`, `Pengguna`, `Tetapan` dan `LogAudit` akan dibuat. Tab versi lama (contoh `MURID` dengan No. Daftar) ditukar nama jadi `..._LAMA`, tidak dipadam.
    - Akaun admin pertama (`ADM001`) dicipta. **Catat PIN sementara yang dipaparkan.** Ia tak akan dipaparkan lagi.
-8. **Tambah pengguna:** **Smart Late Record > 2. Tambah pengguna**. Isi nama dan peranan (`PENGAWAS`, `GURU` atau `ADMIN`). ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
+8. **Tambah pengguna:** **Semarak Tepat > 2. Tambah pengguna**. Isi nama dan peranan (`PENGAWAS`, `GURU` atau `ADMIN`). ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
 9. Semak tab `Tetapan` (waktu bertugas pengawas, had lewat, had tindakan, senarai sebab). Buat masa ni nilai diubah terus dalam Sheet. Borang tetapan dalam web app akan datang.
-10. **Data murid:** untuk ujian, guna **4. Masukkan murid olok-olok**. Jangan guna data murid sebenar sehingga semua ujian peranan lulus.
+10. **Data murid:** untuk ujian, guna **4. Masukkan murid olok-olok**. Jangan guna data murid sebenar sehingga semua ujian peranan dan import lulus.
 11. **Deploy:** dalam Apps Script, pergi ke **Deploy > New deployment > Web app**.
     - Execute as: **Me**
     - Who has access: **belum diputuskan** (lihat brief bahagian 8). Pilihan "Anyone within [domain]" bermaksud pengguna perlu login Google domain dulu, kemudian ID+PIN.
@@ -55,20 +55,42 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 - 5 kali PIN salah berturut-turut: akaun dikunci 15 minit.
 - Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru dan admin 30 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
 - Refresh halaman = perlu login semula.
-- Semua login (berjaya dan gagal), tukar/reset PIN, rekod dibuat atau dipadam, dan import murid direkod dalam tab `LogAudit`.
+- Semua login (berjaya dan gagal), tukar/reset PIN, rekod dibuat atau dibatalkan, perubahan murid dan import direkod dalam tab `LogAudit`.
 
-## Urus murid (murid baru, pindah, tukar kelas)
+## Rekod kelewatan
 
-Admin boleh buat semua ni dalam web app, melalui tab **Murid**:
-- **Murid baru:** isi No. Daftar, Kelas dan Nama, kemudian tekan Tambah Murid.
-- **Pindah atau berhenti:** Edit, kemudian tukar Status jadi Tidak aktif. Rekod lama murid tu kekal dalam laporan.
-- **Tukar kelas:** Edit, kemudian tukar Kelas.
-- **Tambah pukal (CSV):** muat turun Template CSV, isi dalam Excel, kemudian Save As **CSV UTF-8**. Pilih fail tu dan tekan Import.
-  - Kolum yang perlu ada: `NoDaftar, Nama, Kelas`. Fail export APDM pun boleh, dan kolum lain akan diabaikan.
-  - No. Daftar yang sudah wujud akan dilangkau. Tick "Kemas kini" kalau nak kemas kini nama atau kelas murid tersebut.
-  - Baris yang ada ralat akan disenaraikan ikut nombor baris. Baris lain tetap diimport.
+- Tab **Rekod**: cari murid ikut nama atau ID, ketik nama, pilih sebab (pilihan, boleh kosong), tekan **Rekod jam HH:MM**.
+- Masa tiba dicap oleh server, bukan dari jam telefon. Masa tidak boleh diubah selepas disimpan.
+- Selepas `had_lewat` (asal 07:20) dikira lewat. Tepat 07:20 tidak lewat. Rekod sebelum had tetap disimpan tapi ditanda **tidak lewat** dan tidak masuk laporan.
+- Seorang murid hanya boleh direkod sekali sehari. Murid yang sudah direkod tunjuk masa rekod dalam senarai.
 
-Import APDM sesuai untuk awal tahun sahaja, sebab import akan ganti seluruh senarai murid.
+## Batal rekod
+
+- Tab **Hari ini**: ketik rekod untuk batal.
+- Pengawas dan guru disiplin hanya boleh batal rekod sendiri pada hari yang sama. Admin boleh batal rekod sesiapa, tapi wajib isi catatan.
+- Rekod tidak dipadam. Kolum `Dibatalkan`, `ID_Pembatal`, `Tarikh_Batal` dan `Catatan_Batal` diisi, dan rekod tidak dikira dalam laporan.
+
+## Urus pelajar (admin)
+
+Tab **Pelajar** dalam web app:
+- **Tambah seorang pelajar:** isi nama, tingkatan dan kelas. ID (`MUR0001`, `MUR0002`, ...) dijana sistem dan tidak pernah digunakan semula.
+- **Pindah atau berhenti:** tekan butang status **Aktif** untuk tukar jadi tidak aktif. Rekod lama kekal dalam laporan.
+- **Import CSV:** muat turun template, isi dalam Excel, Save As **CSV UTF-8**, kemudian pilih fail.
+  - Lajur wajib: `Nama, Tingkatan, Kelas` (Tingkatan 1 hingga 5, Kelas contoh `Amanah`).
+  - Sistem semak dulu. Jika ada satu baris bermasalah, **tiada apa disimpan** dan senarai ralat dipaparkan.
+  - Pelajar sedia ada dipadankan ikut nama + tingkatan + kelas. Pelajar baharu ditambah. Pelajar yang **tiada dalam fail ditanda tidak aktif** (tidak dipadam). Jadi fail mesti senarai penuh semua kelas.
+  - Sebelum simpan, tab `Murid` dibackup ke tab baharu `Murid_backup_<tarikh>`.
+  - Teks yang bermula dengan `=`, `+`, `-` atau `@` disimpan sebagai teks (elak formula injection).
+
+> Had padanan ikut nama: bila murid naik tingkatan awal tahun, tingkatan dalam fail baharu berbeza, jadi sistem akan cipta ID baharu dan tandakan ID lama tidak aktif. Rekod lama kekal di bawah ID lama.
+
+## Laporan (guru disiplin dan admin)
+
+- Pilih tarikh mula, tarikh akhir dan kelas.
+- Ringkasan: jumlah kes kelewatan dan bilangan pelajar terlibat.
+- **Paling kerap lewat** dalam tempoh dipilih.
+- **Capai had tindakan**: pelajar yang lewat `had_tindakan_sebulan` kali atau lebih dalam bulan semasa.
+- **Eksport CSV** untuk senarai penuh dalam tempoh dipilih.
 
 ## Kemas kini kod
 
@@ -81,14 +103,16 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Pengawas login di luar waktu bertugas: keluar mesej "Di luar waktu bertugas".
 - [ ] Biar pengawas tak buat apa-apa 3 minit, kemudian tekan apa-apa: kembali ke skrin login.
 - [ ] Kalau Google sendiri yang sekat URL web app, mungkin setting domain tak benarkan.
-- [ ] Rekod seorang murid, kemudian semak baris baru dalam tab REKOD.
-- [ ] Rekod murid yang sama sekali lagi. Sepatutnya keluar amaran "Sudah direkod hari ini".
-- [ ] Rekod sebelum 7:20 pagi. Sepatutnya keluar amaran "belum waktu lewat".
-- [ ] Pengawas tak nampak tab Laporan, hanya nampak rekod sendiri dalam Hari ini, dan tak boleh edit atau padam rekod.
-- [ ] Laporan: Cetak/PDF dan Download CSV berfungsi pada phone dan PC.
+- [ ] Rekod seorang murid, kemudian semak baris baru dalam tab `Rekod` (masa diisi server).
+- [ ] Ketik murid yang sama sekali lagi: keluar mesej "Sudah direkod hari ini".
+- [ ] Rekod sebelum atau tepat 07:20: disimpan dengan `Lewat = tidak`, tidak masuk laporan.
+- [ ] Pengawas hanya nampak tab Rekod dan Hari ini, dan hanya rekod sendiri dalam Hari ini.
+- [ ] Guru disiplin tidak boleh batal rekod pengawas. Admin boleh, dengan catatan.
+- [ ] Import CSV dengan satu baris rosak: tiada apa disimpan. Import fail betul: tab backup dicipta.
+- [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
 
 ## Nota PDPA
 
-- Data disimpan: No. Daftar, Nama, Kelas, dan rekod kelewatan sahaja. Tiada IC.
+- Data murid disimpan: ID sistem, Nama, Tingkatan, Kelas, Status, dan rekod kelewatan. Tiada No. KP atau IC.
 - Akses dikawal ikut tab `Pengguna`. Setiap request semak sesi dan peranan di server. Tiada data dimuat sebelum login.
-- Cadangan: pada awal tahun baru, buat salinan Sheet sebagai arkib, kemudian kosongkan tab REKOD dan import semula data murid.
+- Cadangan: pada awal tahun baru, buat salinan Sheet sebagai arkib, kemudian kosongkan tab `Rekod`. Tempoh simpan rekod masih belum diputuskan (brief bahagian 8).

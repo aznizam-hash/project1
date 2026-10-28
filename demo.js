@@ -6,7 +6,7 @@
  * Fail ini tidak perlu dimasukkan ke Apps Script.
  */
 (function () {
-  const KEY = 'slr-demo-v2';
+  const KEY = 'slr-demo-v3';
   const TZ = 'Asia/Kuala_Lumpur';
   const PIN_DEMO = '246810';
   const AKAUN = [
@@ -25,39 +25,46 @@
 
   // ---------- Data contoh ----------
   function seed() {
-    const kelas = ['1 Amanah', '2 Bestari', '3 Cemerlang', '4 Dinamik', '5 Elit'];
-    const depan = ['Ahmad', 'Nur', 'Muhammad', 'Siti', 'Daniel', 'Aisyah', 'Hafiz', 'Mei Ling', 'Arjun', 'Farah'];
-    const belakang = ['Hakimi', 'Aina', 'Irfan', 'Hajar', 'Lim', 'Sofea', 'Zulkifli', 'Tan', 'Kumar', 'Nabila'];
-    const murid = [['NoDaftar', 'Nama', 'Kelas', 'Aktif']];
-    let n = 1001;
-    kelas.forEach((k, ki) => {
-      for (let i = 0; i < 8; i++) {
-        murid.push([String(n++), (depan[(i + ki * 3) % 10] + ' ' + belakang[(i * 7 + ki) % 10]).toUpperCase(), k, 'YA']);
-      }
+    const kelas = [[1, 'Amanah'], [2, 'Bestari'], [3, 'Cemerlang'], [4, 'Dinamik'], [5, 'Elit']];
+    const nama = ['Ahmad bin Ali', 'Siti Hajar binti Rahman', 'Muhammad Irfan bin Hassan', 'Tan Mei Ling',
+      'Arjun a/l Suresh', 'Nur Aisyah binti Kamal', 'Daniel bin Ismail', 'Farah binti Yusof',
+      'Hafiz bin Osman', 'Lim Wei Jie', 'Sofea binti Zulkifli', 'Priya a/p Ramesh',
+      'Aiman bin Rosli', 'Nabila binti Hamid', 'Haziq bin Salleh', 'Chong Kai Xuan',
+      'Aina binti Mahmud', 'Amirul bin Razak', 'Wong Jia Hui', 'Iman binti Karim',
+      'Zarif bin Fauzi', 'Kavitha a/p Muthu', 'Adam bin Hakim', 'Balqis binti Aziz',
+      'Ong Zhi Hao', 'Syafiq bin Latif', 'Alya binti Nordin', 'Rizal bin Jaafar',
+      'Deepa a/p Kumar', 'Haris bin Sufian', 'Qistina binti Rashid', 'Ng Yi Xin',
+      'Faris bin Ahmad', 'Humaira binti Saad', 'Luqman bin Hashim', 'Ravi a/l Ganesan',
+      'Insyirah binti Halim', 'Danish bin Effendi', 'Lee Shu Ting', 'Hakimi bin Rahim'];
+    const murid = [['ID_Murid', 'Nama', 'Tingkatan', 'Kelas', 'Status']];
+    nama.forEach((nm, i) => {
+      const k = kelas[Math.floor(i / 8)];
+      murid.push(['MUR' + String(i + 1).padStart(4, '0'), nm, k[0], k[1], 'aktif']);
     });
     const sebab = ['Masalah kenderaan', 'Bangun lewat', 'Hujan lebat', 'Urusan keluarga', 'Lain-lain'];
-    const rekod = [['ID', 'Timestamp', 'Tarikh', 'Masa', 'MinitLewat', 'NoDaftar', 'Nama', 'Kelas', 'Sebab', 'Catatan', 'DirekodOleh']];
+    const rekod = [['ID_Rekod', 'Tarikh', 'Masa_Tiba', 'ID_Murid', 'Kelas', 'ID_Pengguna', 'Sebab', 'Lewat', 'Status',
+      'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal']];
     // Rekod rekaan untuk 45 hari lepas (hari bekerja sahaja)
     let r = 7;
     const rand = m => { r = (r * 9301 + 49297) % 233280; return Math.floor(r / 233280 * m); };
     for (let d = 45; d >= 1; d--) {
       const t = new Date(Date.now() - d * 86400000);
-      const dow = Number(fmt(t, 'u'));
-      if (dow > 5) continue;
+      if (Number(fmt(t, 'u')) > 5) continue;
       const bil = rand(5);
+      const ada = {};
       for (let j = 0; j < bil; j++) {
         const m = murid[1 + (j === 0 ? rand(6) : rand(murid.length - 1))]; // beberapa murid jadi "kerap"
-        const minit = 1 + rand(35);
-        const masa = '07:' + String(20 + Math.min(minit, 39)).padStart(2, '0') + ':00';
-        const s = sebab[rand(sebab.length)];
-        rekod.push(['seed' + d + '-' + j, '', fmt(t, 'yyyy-MM-dd'), masa, minit, m[0], m[1], m[2], s,
-          s === 'Lain-lain' ? 'Teman adik ke sekolah' : '', 'PGW001']);
+        if (ada[m[0]]) continue;
+        ada[m[0]] = true;
+        const minit = 21 + rand(39);
+        const masa = '07:' + String(minit).padStart(2, '0') + ':' + String(rand(60)).padStart(2, '0');
+        rekod.push(['RDEMO' + d + '-' + j, fmt(t, 'yyyy-MM-dd'), masa, m[0], m[2] + ' ' + m[3], 'PGW001',
+          rand(3) ? sebab[rand(sebab.length)] : '', 'ya', 'menunggu semakan', '', '', '', 'tidak', '', '', '']);
       }
     }
     return {
-      MURID: murid,
-      REKOD: rekod,
-      IMPORT_APDM: [[]],
+      Murid: murid,
+      Rekod: rekod,
       Pengguna: [['ID_Pengguna', 'Nama', 'Peranan', 'Hash_PIN', 'Salt', 'Perlu_Tukar_PIN', 'Dikunci_Hingga', 'Status', 'Cubaan_Gagal']],
       Tetapan: [['Kunci', 'Nilai', 'Keterangan'],
         // Demo sahaja: tetingkap pengawas sepanjang hari supaya boleh dicuba bila-bila masa
@@ -137,7 +144,10 @@
     const tulis = (r, c, v) => {
       v.forEach((row, i) => {
         rows[r - 1 + i] = rows[r - 1 + i] || [];
-        row.forEach((x, j) => { rows[r - 1 + i][c - 1 + j] = x instanceof Date ? x.toISOString() : x; });
+        row.forEach((x, j) => {
+          // Macam Google Sheets: awalan ' (paksa teks) tidak disimpan sebagai sebahagian nilai
+          rows[r - 1 + i][c - 1 + j] = x instanceof Date ? x.toISOString() : (typeof x === 'string' ? x.replace(/^'/, '') : x);
+        });
       });
       save();
     };
@@ -147,7 +157,11 @@
         getDisplayValues: () => rows.map(r => r.map(x => String(x == null ? '' : x)))
       }),
       getLastRow: () => rows.length,
-      getRange: (r, c) => ({ setValues: v => tulis(r, c, v), setValue: v => tulis(r, c, [[v]]) }),
+      getRange: (r, c, nr, nc) => ({
+        setValues: v => tulis(r, c, v), setValue: v => tulis(r, c, [[v]]),
+        getValues: () => rows.slice(r - 1, r - 1 + (nr || 1)).map(x => x.slice(c - 1, c - 1 + (nc || 1)).map(keluar))
+      }),
+      copyTo: () => ({ setName: n => { db[n] = rows.map(x => x.slice()); save(); } }),
       appendRow: row => tulis(rows.length + 1, 1, [row]),
       deleteRow: r => { rows.splice(r - 1, 1); save(); }
     };
@@ -197,13 +211,11 @@
   window.google = { script: { run: runner() } };
 
   // ---------- Banner demo ----------
-  const bar = document.createElement('div');
-  bar.style.cssText = 'background:#fef0c7;color:#7a2e0e;padding:8px 16px;font-size:13px;display:flex;gap:8px;flex-wrap:wrap;align-items:center';
-  bar.className = 'no-print';
-  bar.innerHTML = '<b>MOD DEMO</b><span>Data rekaan, disimpan dalam browser ini sahaja. ' +
+  const bar = document.getElementById('banner');
+  bar.innerHTML = '<span><b>Mod demo.</b> Data rekaan, disimpan dalam pelayar ini sahaja dan tidak dihantar ke mana-mana. ' +
     'Akaun: ADM001, GRU001, PGW001, PGW002 (perlu tukar PIN). PIN semua: ' + PIN_DEMO + '.</span>' +
-    '<button id="demoReset" class="btn sec sm" style="margin-left:auto">Reset data</button>';
-  document.body.insertBefore(bar, document.body.firstChild);
+    '<button id="demoReset">Reset data</button>';
+  bar.hidden = false;
   document.getElementById('demoReset').addEventListener('click', () => {
     if (!confirm('Padam semua data demo dan mula semula?')) return;
     db = seed(); save(); location.reload();
