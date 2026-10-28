@@ -153,6 +153,11 @@ function doGet() {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
+// Maklumat awam untuk skrin login. Tiada data peribadi, jadi boleh dipanggil tanpa sesi.
+function getInfoAwam() {
+  return { sekolah: CONFIG.NAMA_SEKOLAH };
+}
+
 // ---------- Login & sesi ----------
 
 function logMasuk(id, pin) {
