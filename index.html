@@ -350,6 +350,7 @@
     <!-- LAPORAN -->
     <section id="tab-laporan" hidden>
       <h2 class="page">Laporan</h2>
+      <p class="muted" id="lpSekolah" style="margin:-8px 0 14px"></p>
       <div class="card">
         <div class="row">
           <div><label class="f" for="lpDari">Dari</label><input id="lpDari" type="date"></div>
@@ -501,6 +502,7 @@ async function mula() {
     S.offset = d.config.masaServer - Date.now();
     $('whoNama').textContent = d.user.nama;
     $('whoPeranan').textContent = LABEL_PERANAN[d.user.peranan] || d.user.peranan;
+    $('lpSekolah').textContent = d.config.sekolah;
     $('who').hidden = false;
     $('navPelajar').hidden = d.user.peranan !== 'ADMIN';
     $('navLaporan').hidden = !['GURU', 'ADMIN'].includes(d.user.peranan);
@@ -1122,7 +1124,8 @@ $('hasilLaporan').addEventListener('click', e => {
     if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return '"' + s.replace(/"/g, '""') + '"';
   }).join(',')).join('\r\n');
-  muatTurun(`laporan-lewat_${r.dari}_${r.hingga}.csv`, teks);
+  const slug = String(S.init.config.sekolah || '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+  muatTurun(`laporan-lewat_${slug ? slug + '_' : ''}${r.dari}_${r.hingga}.csv`, teks);
 });
 
 // ---------- Mula ----------
@@ -1131,6 +1134,7 @@ function tunjukLogin() {
   $('loading').remove();
   $('skrinLogin').hidden = false;
   $('lgId').focus();
+  run('getInfoAwam', []).then(r => { if (r.sekolah) $('lgSekolah').textContent = r.sekolah; }).catch(() => {});
 }
 // Dalam Apps Script terus ke login. Di luar (contoh GitHub Pages) guna mod demo.
 if (window.google && google.script) tunjukLogin();
