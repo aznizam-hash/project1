@@ -32,7 +32,7 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 2. Dalam Sheet tu, buka **Extensions > Apps Script**.
 3. Padam kod dalam `Code.gs`, kemudian paste isi fail `Code.gs`.
 4. Klik **+ > HTML**, namakan `Index` (huruf besar I, tanpa .html), kemudian paste isi `index.html`.
-5. Dalam `Code.gs`, edit `NAMA_SEKOLAH` dalam bahagian `CONFIG`. Lepas tu tekan Save.
+5. `NAMA_SEKOLAH` dalam bahagian `CONFIG` (baris 15 `Code.gs`) sudah diisi `SMK Mengkarak`. Tukar hanya jika guna untuk sekolah lain. Tekan Save.
 6. Kembali ke Sheet dan refresh. Menu **SemarakLateRecord** akan muncul.
 7. Klik **SemarakLateRecord > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
    - Tab `Murid`, `Rekod`, `Pengguna`, `Tetapan` dan `LogAudit` akan dibuat. Tab versi lama (contoh `MURID` dengan No. Daftar) ditukar nama jadi `..._LAMA`, tidak dipadam.
