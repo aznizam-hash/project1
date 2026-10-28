@@ -244,7 +244,7 @@ function menuPasangPemadaman() {
     if (t.getHandlerFunction() === 'pemadamanAuto') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('pemadamanAuto').timeBased().onMonthDay(1).atHour(3).create();
-  ui.alert('Pemadaman automatik dipasang. Setiap hari 1 jam 3 pagi, rekod dan log lebih ' + CONFIG.SIMPAN_TAHUN +
+  ui.alert('Pemadaman automatik dipasang. Setiap bulan pada tarikh 1, jam 3 pagi, rekod dan log lebih ' + CONFIG.SIMPAN_TAHUN +
     ' tahun dipadam, dan backup lama dipindah ke Trash Drive.\n\nGunakan menu 6 untuk semak dulu sebelum tunggu bulan depan.');
 }
 
