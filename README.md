@@ -53,7 +53,7 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 - PIN disimpan sebagai hash SHA-256 (dengan salt, diulang 1000 kali). Admin tak boleh lihat PIN.
 - Lupa PIN atau akaun dikunci: admin buka tab **Pengguna**, ketik nama, tekan **Reset PIN**. Sesi lama pengguna tersebut terus terbatal dan kunci dibuka. Admin tak boleh reset PIN sendiri dalam web app (guna menu Sheet **3. Reset PIN pengguna** atau minta admin lain).
 - 5 kali PIN salah berturut-turut: akaun dikunci 15 minit.
-- Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru dan admin 30 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
+- Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru disiplin 30 minit, admin 15 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
 - Refresh halaman = perlu login semula.
 - Semua login (berjaya dan gagal), tukar/reset PIN, rekod dibuat atau dibatalkan, perubahan murid dan import direkod dalam tab `LogAudit`.
 
@@ -154,6 +154,13 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Tab Tetapan > Log: login gagal, rekod dibuat dan perubahan tetapan semua kelihatan, dan tapisan pengguna berfungsi.
 - [ ] Eksport, tukar kelas dalam Excel, import semula: ID kekal dan kelas baru dipaparkan.
 - [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
+
+## Backup, simpanan dan pemadaman data
+
+- **Backup:** menu **SemarakLateRecord > 5. Pasang backup mingguan**. Salinan Sheet dibuat setiap Isnin jam 2 pagi dalam folder Drive yang sama. Jalankan sekali sahaja. Sebelum import murid, tab `Murid` juga dibackup automatik.
+- **Simpanan rekod:** ikut SPT sekolah dan cadangan PDPA. Tempoh: tahun semasa dan setahun selepas tu. Admin yang padam data bila tempoh tamat.
+- **Cara padam:** admin buat salinan Sheet dahulu, kemudian padam baris lama dalam tab `Rekod` dan `LogAudit`. Simpan rekod pemadaman dalam buku log luar.
+- **Skop data:** sistem ni hanya merekod kehadiran lewat. Tiada integrasi dengan MOEIS. Tiada nombor rasmi murid digunakan.
 
 ## Nota PDPA
 

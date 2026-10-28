@@ -16,7 +16,7 @@ const CONFIG = {
   ZON_WAKTU: 'Asia/Kuala_Lumpur',
   MAKS_HARI_LAPORAN: 366,
   MAKS_IMPORT: 3000,
-  SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 30 }, // tamat jika tiada aktiviti
+  SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 15 }, // tamat jika tiada aktiviti (keputusan sekolah: admin 15 minit)
   HAD_CUBAAN: 5,             // PIN salah berturut-turut sebelum akaun dikunci
   KUNCI_MINIT: 15,
   ITERASI_HASH: 1000         // SHA-256 diulang supaya PIN 6 digit lebih sukar diteka jika Sheet bocor
@@ -50,6 +50,7 @@ function onOpen() {
     .addItem('2. Tambah pengguna', 'menuTambahPengguna')
     .addItem('3. Reset PIN pengguna', 'menuResetPin')
     .addItem('4. Masukkan murid olok-olok (ujian)', 'menuMuridOlokOlok')
+    .addItem('5. Pasang backup mingguan (Isnin 2 pagi)', 'menuPasangBackup')
     .addToUi();
 }
 
@@ -128,6 +129,24 @@ function menuResetPin() {
   } catch (e) {
     ui.alert(e.message);
   }
+}
+
+// Salinan Sheet ke folder yang sama dalam Drive. Dijalankan automatik setiap minggu.
+function backupMingguan() {
+  const ss = SpreadsheetApp.getActive();
+  const nama = 'Backup ' + ss.getName() + ' ' + fmt_(new Date(), 'yyyy-MM-dd HH-mm');
+  DriveApp.getFileById(ss.getId()).makeCopy(nama);
+  log_('SISTEM', 'BACKUP_MINGGUAN', nama);
+}
+
+function menuPasangBackup() {
+  const ui = SpreadsheetApp.getUi();
+  // Buang trigger lama supaya tak bertindih
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'backupMingguan') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('backupMingguan').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(2).create();
+  ui.alert('Backup mingguan dipasang. Salinan Sheet dibuat setiap Isnin jam 2 pagi, di folder yang sama dalam Drive.\n\nSalinan mengandungi data murid. Simpan dengan selamat dan padam mengikut polisi sekolah.');
 }
 
 function menuMuridOlokOlok() {
