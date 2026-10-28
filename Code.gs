@@ -15,8 +15,9 @@ const CONFIG = {
   NAMA_SEKOLAH: 'SMK Mengkarak',
   ZON_WAKTU: 'Asia/Kuala_Lumpur',
   MAKS_HARI_LAPORAN: 366,
+  SIMPAN_TAHUN: 2,           // rekod dan backup dipadam selepas tempoh ini (keputusan sekolah)
   MAKS_IMPORT: 3000,
-  SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 30 }, // tamat jika tiada aktiviti
+  SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 15 }, // tamat jika tiada aktiviti (keputusan sekolah: admin 15 minit)
   HAD_CUBAAN: 5,             // PIN salah berturut-turut sebelum akaun dikunci
   KUNCI_MINIT: 15,
   ITERASI_HASH: 1000         // SHA-256 diulang supaya PIN 6 digit lebih sukar diteka jika Sheet bocor
@@ -50,6 +51,9 @@ function onOpen() {
     .addItem('2. Tambah pengguna', 'menuTambahPengguna')
     .addItem('3. Reset PIN pengguna', 'menuResetPin')
     .addItem('4. Masukkan murid olok-olok (ujian)', 'menuMuridOlokOlok')
+    .addItem('5. Pasang backup mingguan (Isnin 2 pagi)', 'menuPasangBackup')
+    .addItem('6. Semak data yang akan dipadam', 'menuSemakPemadaman')
+    .addItem('7. Pasang pemadaman automatik (bulanan)', 'menuPasangPemadaman')
     .addToUi();
 }
 
@@ -128,6 +132,120 @@ function menuResetPin() {
   } catch (e) {
     ui.alert(e.message);
   }
+}
+
+// Salinan Sheet ke folder yang sama dalam Drive. Dijalankan automatik setiap minggu.
+function backupMingguan() {
+  const ss = SpreadsheetApp.getActive();
+  const nama = 'Backup ' + ss.getName() + ' ' + fmt_(new Date(), 'yyyy-MM-dd HH-mm');
+  DriveApp.getFileById(ss.getId()).makeCopy(nama);
+  log_('SISTEM', 'BACKUP_MINGGUAN', nama);
+}
+
+function menuPasangBackup() {
+  const ui = SpreadsheetApp.getUi();
+  // Buang trigger lama supaya tak bertindih
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'backupMingguan') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('backupMingguan').timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(2).create();
+  ui.alert('Backup mingguan dipasang. Salinan Sheet dibuat setiap Isnin jam 2 pagi, di folder yang sama dalam Drive.\n\nSalinan mengandungi data murid. Simpan dengan selamat dan padam mengikut polisi sekolah.');
+}
+
+// ---------- Pemadaman data lama (tempoh simpanan) ----------
+
+// Tarikh cutoff dalam format yyyy-MM-dd. Rekod dan log sebelum tarikh ni dipadam.
+function tarikhPotong_() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - CONFIG.SIMPAN_TAHUN);
+  return fmt_(d, 'yyyy-MM-dd');
+}
+
+// Tarikh boleh datang sebagai teks (rekod baharu) atau Date (rekod lama). Pulangkan yyyy-MM-dd.
+function tarikhNormal_(v) {
+  return v instanceof Date ? fmt_(v, 'yyyy-MM-dd') : String(v == null ? '' : v).slice(0, 10);
+}
+
+// Senarai baris yang akan dipadam, tanpa menulis apa-apa
+function senaraiPemadaman_(potong) {
+  const rekod = readRows_(TAB.REKOD).filter(function (r) {
+    const t = tarikhNormal_(r.Tarikh);
+    return String(r.ID_Rekod).trim() && t && t < potong;
+  });
+  const log = readRows_(TAB.LOG).filter(function (r) {
+    const t = tarikhNormal_(r.Masa);
+    return t && t < potong;
+  });
+  return { rekod: rekod, log: log };
+}
+
+// Fail backup dalam folder yang sama dengan Sheet, dibuat sebelum tarikh potong
+function backupLama_(potong) {
+  const ss = SpreadsheetApp.getActive();
+  const induk = DriveApp.getFileById(ss.getId()).getParents();
+  if (!induk.hasNext()) return [];
+  const folder = induk.next();
+  const awalan = 'Backup ' + ss.getName() + ' ';
+  const hasil = [];
+  const it = folder.getFiles();
+  while (it.hasNext()) {
+    const f = it.next();
+    if (f.getName().indexOf(awalan) === 0 && fmt_(f.getDateCreated(), 'yyyy-MM-dd') < potong) hasil.push(f);
+  }
+  return hasil;
+}
+
+// Padam baris dari bawah ke atas, dalam blok bersebelahan, supaya nombor baris tak bergeser
+function padamBaris_(sh, baris) {
+  const senarai = baris.slice().sort(function (a, b) { return b - a; });
+  let i = 0;
+  while (i < senarai.length) {
+    let j = i;
+    while (j + 1 < senarai.length && senarai[j + 1] === senarai[j] - 1) j++;
+    sh.deleteRows(senarai[j], j - i + 1);
+    i = j + 1;
+  }
+}
+
+// Semakan sahaja: tunjuk jumlah tanpa padam apa-apa
+function menuSemakPemadaman() {
+  const ui = SpreadsheetApp.getUi();
+  const potong = tarikhPotong_();
+  const s = senaraiPemadaman_(potong);
+  const fail = backupLama_(potong);
+  ui.alert('Tarikh potong: ' + potong + ' (' + CONFIG.SIMPAN_TAHUN + ' tahun).\n\n' +
+    'Rekod yang akan dipadam: ' + s.rekod.length + '\n' +
+    'Entri LogAudit yang akan dipadam: ' + s.log.length + '\n' +
+    'Salinan backup yang akan dipindah ke Trash: ' + fail.length + '\n\n' +
+    'Tiada apa dipadam setakat ni.');
+}
+
+// Dijalankan automatik setiap bulan. Dikunci supaya tak bertindih dengan simpanan lain.
+function pemadamanAuto() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) return;
+  try {
+    const potong = tarikhPotong_();
+    const s = senaraiPemadaman_(potong);
+    const fail = backupLama_(potong);
+    if (s.rekod.length) padamBaris_(sheet_(TAB.REKOD), s.rekod.map(function (r) { return r._row; }));
+    if (s.log.length) padamBaris_(sheet_(TAB.LOG), s.log.map(function (r) { return r._row; }));
+    fail.forEach(function (f) { f.setTrashed(true); });
+    log_('SISTEM', 'PEMADAMAN_AUTO', 'Potong ' + potong + ': rekod ' + s.rekod.length +
+      ', log ' + s.log.length + ', backup ' + fail.length);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function menuPasangPemadaman() {
+  const ui = SpreadsheetApp.getUi();
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'pemadamanAuto') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('pemadamanAuto').timeBased().onMonthDay(1).atHour(3).create();
+  ui.alert('Pemadaman automatik dipasang. Setiap bulan pada tarikh 1, jam 3 pagi, rekod dan log lebih ' + CONFIG.SIMPAN_TAHUN +
+    ' tahun dipadam, dan backup lama dipindah ke Trash Drive.\n\nGunakan menu 6 untuk semak dulu sebelum tunggu bulan depan.');
 }
 
 function menuMuridOlokOlok() {

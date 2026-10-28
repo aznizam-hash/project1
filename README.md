@@ -53,7 +53,7 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 - PIN disimpan sebagai hash SHA-256 (dengan salt, diulang 1000 kali). Admin tak boleh lihat PIN.
 - Lupa PIN atau akaun dikunci: admin buka tab **Pengguna**, ketik nama, tekan **Reset PIN**. Sesi lama pengguna tersebut terus terbatal dan kunci dibuka. Admin tak boleh reset PIN sendiri dalam web app (guna menu Sheet **3. Reset PIN pengguna** atau minta admin lain).
 - 5 kali PIN salah berturut-turut: akaun dikunci 15 minit.
-- Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru dan admin 30 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
+- Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru disiplin 30 minit, admin 15 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
 - Refresh halaman = perlu login semula.
 - Semua login (berjaya dan gagal), tukar/reset PIN, rekod dibuat atau dibatalkan, perubahan murid dan import direkod dalam tab `LogAudit`.
 
@@ -154,6 +154,19 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Tab Tetapan > Log: login gagal, rekod dibuat dan perubahan tetapan semua kelihatan, dan tapisan pengguna berfungsi.
 - [ ] Eksport, tukar kelas dalam Excel, import semula: ID kekal dan kelas baru dipaparkan.
 - [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
+
+## Backup, simpanan dan pemadaman data
+
+- **Backup:** menu **SemarakLateRecord > 5. Pasang backup mingguan**. Salinan Sheet dibuat setiap Isnin jam 2 pagi dalam folder Drive yang sama. Jalankan sekali sahaja. Sebelum import murid, tab `Murid` juga dibackup automatik.
+- **Tempoh simpanan:** 2 tahun dari tarikh rekod. Rekod, dan salinan backup yang mengandungi rekod tu, dipadam bila tempoh tamat. Admin yang buat pemadaman. Tempoh ni cadangan, belum disahkan dengan arahan KPM atau pegawai PDPA sekolah.
+- **Pemadaman automatik:** pasang sekali dengan menu **SemarakLateRecord > 7. Pasang pemadaman automatik**. Setiap bulan (tarikh 1, jam 3 pagi):
+  - Baris `Rekod` dan `LogAudit` yang lebih 2 tahun dipadam terus dari Sheet.
+  - Salinan backup yang lebih 2 tahun dipindah ke **Trash** Drive. Boleh dipulihkan dalam 30 hari, lepas tu dipadam kekal oleh Drive.
+  - Satu entri `PEMADAMAN_AUTO` dicatat dalam `LogAudit` dengan jumlah yang dipadam.
+- **Semak dulu:** menu **6. Semak data yang akan dipadam** tunjuk jumlah tanpa padam apa-apa. Guna menu ni sebelum tunggu bulan pertama.
+- **Sebelum pemadaman pertama:** buat salinan Sheet secara manual sebagai arkib (File > Make a copy), dan simpan di tempat yang selamat.
+- Pemadaman dalam Sheet tak boleh diundur. Data yang dipadam hanya boleh dipulihkan dari salinan arkib atau backup dalam Trash.
+- **Skop data:** sistem ni hanya merekod kehadiran lewat. Tiada integrasi dengan MOEIS. Tiada nombor rasmi murid digunakan.
 
 ## Nota PDPA
 
