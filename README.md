@@ -1,6 +1,6 @@
 # SMART LATE RECORD — Panduan Setup
 
-Sistem rekod kelewatan murid. Guna Google Sheets + Apps Script, login dengan akaun DELIMa.
+Sistem rekod kelewatan murid. Guna Google Sheets + Apps Script. Pengguna login dengan **ID dan PIN 6 digit** (contoh `PGW001`), bukan akaun Google.
 
 ## Fail
 
@@ -12,44 +12,50 @@ Sistem rekod kelewatan murid. Guna Google Sheets + Apps Script, login dengan aka
 
 ## Cuba demo dulu
 
-Buka https://aznizam-hash.github.io/project1/ untuk cuba UI dengan data rekaan. Data demo hanya disimpan dalam browser masing-masing dan tidak masuk ke Google Sheets. Guna dropdown "Login sebagai" untuk tukar antara Admin dan Pengawas.
+Buka https://aznizam-hash.github.io/project1/ untuk cuba UI dengan data rekaan. Data demo hanya disimpan dalam browser masing-masing dan tidak masuk ke Google Sheets.
+
+Akaun demo (PIN semua `246810`): `ADM001` (admin), `GRU001` (guru disiplin), `PGW001` (pengawas), `PGW002` (pengawas yang perlu tukar PIN). Dalam demo, waktu bertugas pengawas dibuka sepanjang hari supaya boleh dicuba bila-bila masa.
+
+## Peranan
+
+| Peranan | ID | Tab |
+|---|---|---|
+| Pengawas | PGW001, PGW002, ... | Rekod, Hari ini (rekod sendiri sahaja). Login hanya dalam waktu bertugas |
+| Guru disiplin | GRU001, ... | Rekod, Hari ini, Laporan |
+| Admin | ADM001, ... | Rekod, Hari ini, Laporan, Pelajar |
 
 ## Langkah setup (sekali sahaja, ~20 minit)
 
-Buat semua langkah ni dengan **akaun DELIMa guru admin**.
+Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Apps Script mesti dimiliki akaun sekolah.
 
-1. **Buat Google Sheet baru** dalam Google Drive DELIMa. Namakan `Smart Late Record`.
+1. **Buat Google Sheet baru**. Namakan `Smart Late Record`.
 2. Dalam Sheet tu, buka **Extensions > Apps Script**.
 3. Padam kod dalam `Code.gs`, kemudian paste isi fail `Code.gs`.
 4. Klik **+ > HTML**, namakan `Index` (huruf besar I, tanpa .html), kemudian paste isi `index.html`.
 5. Dalam `Code.gs`, edit bahagian `CONFIG`: `NAMA_SEKOLAH`, `KOD_SEKOLAH`, dan `LOGO_URL` kalau ada. Lepas tu tekan Save.
 6. Kembali ke Sheet dan refresh. Menu **Smart Late Record** akan muncul.
 7. Klik **Smart Late Record > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
-   - Tab `MURID`, `PENGGUNA`, `SEBAB`, `REKOD` dan `IMPORT_APDM` akan dibuat secara automatik.
-   - Email anda akan dimasukkan sebagai ADMIN.
-8. **Tambah pengguna** dalam tab `PENGGUNA`:
-
-   | Email | Nama | Peranan |
-   |---|---|---|
-   | guru1@moe-dl.edu.my | Cikgu A | ADMIN |
-   | guru2@moe-dl.edu.my | Cikgu B | ADMIN |
-   | pengawas1@moe-dl.edu.my | Pengawas 1 | PENGAWAS |
-   | pengawas2@moe-dl.edu.my | Pengawas 2 | PENGAWAS |
-
-9. **Import data murid:**
-   - Export senarai murid dari APDM ke Excel/CSV.
-   - Copy semua data, termasuk baris header, dan paste ke tab `IMPORT_APDM`.
-   - Klik **Smart Late Record > 2. Import data murid (APDM)**.
-   - Kalau keluar mesej "Header tidak dijumpai", tambah nama header yang betul dalam `CONFIG.APDM_HEADER`, kemudian cuba semula.
-   - Lepas import, tab `IMPORT_APDM` dikosongkan secara automatik. Sistem cuma simpan No. Daftar, Nama dan Kelas.
-10. Semak senarai dalam tab `SEBAB`. Boleh tambah atau ubah ikut keperluan sekolah. Kekalkan `Lain-lain`.
+   - Tab `MURID`, `REKOD`, `Pengguna`, `Tetapan`, `LogAudit` dan `IMPORT_APDM` akan dibuat.
+   - Akaun admin pertama (`ADM001`) dicipta. **Catat PIN sementara yang dipaparkan.** Ia tak akan dipaparkan lagi.
+8. **Tambah pengguna:** **Smart Late Record > 2. Tambah pengguna**. Isi nama dan peranan (`PENGAWAS`, `GURU` atau `ADMIN`). ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
+9. Semak tab `Tetapan` (waktu bertugas pengawas, had lewat, had tindakan, senarai sebab). Buat masa ni nilai diubah terus dalam Sheet. Borang tetapan dalam web app akan datang.
+10. **Data murid:** untuk ujian, guna **4. Masukkan murid olok-olok**. Jangan guna data murid sebenar sehingga semua ujian peranan lulus.
 11. **Deploy:** dalam Apps Script, pergi ke **Deploy > New deployment > Web app**.
     - Execute as: **Me**
-    - Who has access: **Anyone within [domain DELIMa]**
+    - Who has access: **belum diputuskan** (lihat brief bahagian 8). Pilihan "Anyone within [domain]" bermaksud pengguna perlu login Google domain dulu, kemudian ID+PIN.
     - Klik Deploy, kemudian copy URL.
-12. Kongsi URL tersebut kepada 4 pengguna. Pada phone, buka URL dalam Chrome dan pilih **Add to Home Screen**.
 
-> Pengawas **tidak perlu** akses kepada Google Sheet. Mereka hanya guna URL web app. Jangan share Sheet kepada murid.
+> Hanya admin patut ada akses edit pada Google Sheet. Sesiapa yang boleh edit Sheet boleh jalankan menu (tambah pengguna, reset PIN). Pengawas dan guru hanya guna URL web app.
+
+## Login dan PIN
+
+- Login pertama: pengguna wajib tukar PIN sementara. PIN mudah (contoh `111111`, `123456`) ditolak.
+- PIN disimpan sebagai hash SHA-256 (dengan salt, diulang 1000 kali). Admin tak boleh lihat PIN.
+- Lupa PIN: admin guna **3. Reset PIN pengguna**. Sesi lama pengguna tersebut terus terbatal.
+- 5 kali PIN salah berturut-turut: akaun dikunci 15 minit.
+- Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru dan admin 30 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
+- Refresh halaman = perlu login semula.
+- Semua login (berjaya dan gagal), tukar/reset PIN, rekod dibuat atau dipadam, dan import murid direkod dalam tab `LogAudit`.
 
 ## Urus murid (murid baru, pindah, tukar kelas)
 
@@ -70,15 +76,19 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 
 ## Senarai semak ujian (buat sebelum guna sebenar)
 
-- [ ] Akaun pengawas boleh buka web app. Kalau dapat "Tiada akses", semak email dalam tab PENGGUNA. Kalau Google sendiri yang sekat, mungkin setting domain DELIMa tak benarkan.
+- [ ] Login dengan tiga akaun ujian (satu setiap peranan). Setiap satu dipaksa tukar PIN dan nampak tab yang betul sahaja.
+- [ ] PIN salah 5 kali: akaun dikunci 15 minit, dan setiap cubaan ada dalam `LogAudit`.
+- [ ] Pengawas login di luar waktu bertugas: keluar mesej "Di luar waktu bertugas".
+- [ ] Biar pengawas tak buat apa-apa 3 minit, kemudian tekan apa-apa: kembali ke skrin login.
+- [ ] Kalau Google sendiri yang sekat URL web app, mungkin setting domain tak benarkan.
 - [ ] Rekod seorang murid, kemudian semak baris baru dalam tab REKOD.
 - [ ] Rekod murid yang sama sekali lagi. Sepatutnya keluar amaran "Sudah direkod hari ini".
 - [ ] Rekod sebelum 7:20 pagi. Sepatutnya keluar amaran "belum waktu lewat".
-- [ ] Pengawas tak nampak tab Laporan dan tak boleh edit atau padam rekod.
+- [ ] Pengawas tak nampak tab Laporan, hanya nampak rekod sendiri dalam Hari ini, dan tak boleh edit atau padam rekod.
 - [ ] Laporan: Cetak/PDF dan Download CSV berfungsi pada phone dan PC.
 
 ## Nota PDPA
 
 - Data disimpan: No. Daftar, Nama, Kelas, dan rekod kelewatan sahaja. Tiada IC.
-- Akses dikawal ikut senarai dalam tab PENGGUNA. Setiap request disemak di server.
+- Akses dikawal ikut tab `Pengguna`. Setiap request semak sesi dan peranan di server. Tiada data dimuat sebelum login.
 - Cadangan: pada awal tahun baru, buat salinan Sheet sebagai arkib, kemudian kosongkan tab REKOD dan import semula data murid.
