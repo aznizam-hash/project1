@@ -22,7 +22,7 @@ Akaun demo (PIN semua `246810`): `ADM001` (admin), `GRU001` (guru disiplin), `PG
 |---|---|---|
 | Pengawas | PGW001, PGW002, ... | Rekod, Hari ini (rekod sendiri sahaja). Login hanya dalam waktu bertugas |
 | Guru disiplin | GRU001, ... | Rekod, Hari ini, Laporan |
-| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan |
+| Admin | ADM001, ... | Rekod, Hari ini, Pelajar, Laporan, Pengguna |
 
 ## Langkah setup (sekali sahaja, ~20 minit)
 
@@ -37,7 +37,7 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 7. Klik **SemarakLateRecord > 1. Setup tab**, kemudian beri kebenaran (Authorize) bila diminta.
    - Tab `Murid`, `Rekod`, `Pengguna`, `Tetapan` dan `LogAudit` akan dibuat. Tab versi lama (contoh `MURID` dengan No. Daftar) ditukar nama jadi `..._LAMA`, tidak dipadam.
    - Akaun admin pertama (`ADM001`) dicipta. **Catat PIN sementara yang dipaparkan.** Ia tak akan dipaparkan lagi.
-8. **Tambah pengguna:** **SemarakLateRecord > 2. Tambah pengguna**. Isi nama dan peranan (`PENGAWAS`, `GURU` atau `ADMIN`). ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
+8. **Tambah pengguna:** login ke web app sebagai `ADM001`, buka tab **Pengguna**. (Atau guna menu **SemarakLateRecord > 2. Tambah pengguna** dalam Sheet.) ID dijana automatik dan PIN sementara dipaparkan sekali. Beri PIN tu kepada pengguna secara peribadi.
 9. Semak tab `Tetapan` (waktu bertugas pengawas, had lewat, had tindakan, senarai sebab). Buat masa ni nilai diubah terus dalam Sheet. Borang tetapan dalam web app akan datang.
 10. **Data murid:** untuk ujian, guna **4. Masukkan murid olok-olok**. Jangan guna data murid sebenar sehingga semua ujian peranan dan import lulus.
 11. **Deploy:** dalam Apps Script, pergi ke **Deploy > New deployment > Web app**.
@@ -51,11 +51,20 @@ Buat semua langkah ni dengan **akaun domain sekolah**. Fail Sheets dan projek Ap
 
 - Login pertama: pengguna wajib tukar PIN sementara. PIN mudah (contoh `111111`, `123456`) ditolak.
 - PIN disimpan sebagai hash SHA-256 (dengan salt, diulang 1000 kali). Admin tak boleh lihat PIN.
-- Lupa PIN: admin guna **3. Reset PIN pengguna**. Sesi lama pengguna tersebut terus terbatal.
+- Lupa PIN atau akaun dikunci: admin buka tab **Pengguna**, ketik nama, tekan **Reset PIN**. Sesi lama pengguna tersebut terus terbatal dan kunci dibuka. Admin tak boleh reset PIN sendiri dalam web app (guna menu Sheet **3. Reset PIN pengguna** atau minta admin lain).
 - 5 kali PIN salah berturut-turut: akaun dikunci 15 minit.
 - Sesi disimpan di server. Tamat jika tiada aktiviti: pengawas 3 minit, guru dan admin 30 minit. Sesi pengawas juga tamat pada `tetingkap_pengawas_tamat` (asal 09:00).
 - Refresh halaman = perlu login semula.
 - Semua login (berjaya dan gagal), tukar/reset PIN, rekod dibuat atau dibatalkan, perubahan murid dan import direkod dalam tab `LogAudit`.
+
+## Urus pengguna (admin)
+
+Tab **Pengguna** dalam web app:
+- **Tambah pengguna:** nama dan peranan. ID (`PGW001`, `GRU001`, `ADM001`, ...) dijana ikut peranan. PIN sementara dipaparkan sekali sahaja.
+- **Reset PIN:** ketik pengguna, tekan Reset PIN. PIN sementara baharu dipaparkan sekali, dan akaun yang dikunci dibuka.
+- **Aktif / tidak aktif:** pengguna yang dijadikan tidak aktif terus dilog keluar dan tak boleh login. Pengguna tak dipadam supaya rekod lama masih menunjukkan siapa yang merekod.
+- Admin tak boleh ubah akaun sendiri dalam web app.
+- Hash PIN dan salt tidak pernah dihantar ke pelayar.
 
 ## Rekod kelewatan
 
@@ -121,6 +130,7 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Guru disiplin tidak boleh batal rekod pengawas. Admin boleh, dengan catatan.
 - [ ] Import CSV dengan satu baris rosak: tiada apa disimpan. Import fail betul: tab backup dicipta.
 - [ ] Edit seorang pelajar (tukar kelas): ID sama, rekod lama masih ada dalam laporan.
+- [ ] Tab Pengguna: tambah pengguna, reset PIN, jadikan tidak aktif. Pengguna tidak aktif terus dilog keluar.
 - [ ] Eksport, tukar kelas dalam Excel, import semula: ID kekal dan kelas baru dipaparkan.
 - [ ] Laporan dan Eksport CSV berfungsi pada phone dan PC.
 

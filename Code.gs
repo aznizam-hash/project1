@@ -121,21 +121,12 @@ function menuResetPin() {
   const ui = SpreadsheetApp.getUi();
   const r = ui.prompt('Reset PIN', 'ID pengguna (contoh: PGW001):', ui.ButtonSet.OK_CANCEL);
   if (r.getSelectedButton() !== ui.Button.OK) return;
-  const id = String(r.getResponseText()).trim().toUpperCase();
-  const lock = LockService.getScriptLock();
-  lock.waitLock(10000);
   try {
-    const u = cariPengguna_(id);
-    if (!u) { ui.alert('ID ' + id + ' tidak dijumpai.'); return; }
-    const pin = pinRawak_();
-    const salt = Utilities.getUuid();
-    // Salt baru juga membatalkan semua sesi lama pengguna ini
-    tulisPengguna_(u._row, { Hash_PIN: hashPin_(pin, salt), Salt: salt, Perlu_Tukar_PIN: 'ya', Dikunci_Hingga: '', Cubaan_Gagal: 0 });
-    log_(penggunaSheet_(), 'PIN_DIRESET', id);
-    ui.alert('PIN untuk ' + id + ' (' + u.Nama + ') telah direset.\n\nPIN sementara: ' + pin +
+    const a = resetPin_(r.getResponseText(), penggunaSheet_());
+    ui.alert('PIN untuk ' + a.id + ' (' + a.nama + ') telah direset.\n\nPIN sementara: ' + a.pin +
       '\n\nPIN ini dipaparkan sekali sahaja. Pengguna wajib tukar PIN selepas login.');
-  } finally {
-    lock.releaseLock();
+  } catch (e) {
+    ui.alert(e.message);
   }
 }
 
@@ -542,6 +533,53 @@ function simpanImportMurid(token, data) {
   }
 }
 
+// ---------- Urus pengguna (admin) ----------
+// Hash_PIN dan Salt tidak pernah dihantar ke pelayar.
+
+function getSenaraiPengguna(token) {
+  const user = requireUser_(token, ['ADMIN']);
+  const now = Date.now();
+  const susun = { ADMIN: 0, GURU: 1, PENGAWAS: 2 };
+  return readRows_(TAB.PENGGUNA).filter(function (u) { return String(u.ID_Pengguna).trim(); }).map(function (u) {
+    const kunci = u.Dikunci_Hingga instanceof Date && u.Dikunci_Hingga.getTime() > now ? fmt_(u.Dikunci_Hingga, 'HH:mm') : '';
+    return {
+      id: String(u.ID_Pengguna), nama: String(u.Nama), peranan: String(u.Peranan).trim().toUpperCase(),
+      aktif: isAktifPengguna_(u), perluTukarPin: String(u.Perlu_Tukar_PIN).trim().toLowerCase() === 'ya',
+      dikunciHingga: kunci, sendiri: String(u.ID_Pengguna) === user.id
+    };
+  }).sort(function (a, b) { return (susun[a.peranan] - susun[b.peranan]) || a.id.localeCompare(b.id); });
+}
+
+// Pulangkan PIN sementara untuk dipaparkan sekali sahaja kepada admin
+function tambahPengguna(token, nama, peranan) {
+  const user = requireUser_(token, ['ADMIN']);
+  return tambahPengguna_(nama, peranan, user.id);
+}
+
+function resetPinPengguna(token, id) {
+  const user = requireUser_(token, ['ADMIN']);
+  if (String(id).toUpperCase() === user.id) throw new Error('Tidak boleh reset PIN sendiri di sini. Guna menu Sheet atau minta admin lain.');
+  return resetPin_(id, user.id);
+}
+
+function tukarStatusPengguna(token, id, aktif) {
+  const user = requireUser_(token, ['ADMIN']);
+  id = String(id || '').toUpperCase();
+  if (id === user.id) throw new Error('Tidak boleh mengubah status akaun sendiri.');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const u = cariPengguna_(id);
+    if (!u) throw new Error('ID ' + id + ' tidak dijumpai.');
+    // Status tidak aktif terus menamatkan sesi pengguna itu (requireUser_ semak status setiap panggilan)
+    tulisPengguna_(u._row, { Status: aktif ? 'aktif' : 'tidak aktif' });
+    log_(user.id, 'PENGGUNA_STATUS', id + ' -> ' + (aktif ? 'aktif' : 'tidak aktif'));
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // ---------- Helper sesi & PIN (private) ----------
 
 // Semak token sesi, tamat tempoh, status pengguna dan peranan. Pulangkan objek sesi.
@@ -632,7 +670,7 @@ function semakPinBaru_(pin) {
 }
 
 // Tambah pengguna dengan ID berturutan ikut peranan dan PIN sementara. Pulangkan {id, pin}.
-function tambahPengguna_(nama, peranan) {
+function tambahPengguna_(nama, peranan, oleh) {
   nama = clean_(String(nama || '').replace(/\s+/g, ' ').trim(), 100);
   peranan = String(peranan || '').trim().toUpperCase();
   if (!nama) throw new Error('Nama wajib diisi.');
@@ -646,12 +684,30 @@ function tambahPengguna_(nama, peranan) {
       const id = String(u.ID_Pengguna);
       return id.indexOf(awalan) === 0 ? Math.max(m, Number(id.slice(3)) || 0) : m;
     }, 0);
-    const id = awalan + ('00' + (maks + 1)).slice(-3);
+    const id = awalan + String(maks + 1).padStart(3, '0');
     const pin = pinRawak_();
     const salt = Utilities.getUuid();
-    penggunaSheet_().appendRow([id, nama, peranan, hashPin_(pin, salt), salt, 'ya', '', 'aktif', 0]);
-    log_(penggunaSheet_(), 'PENGGUNA_DITAMBAH', id + ' (' + peranan + ')');
-    return { id: id, pin: pin };
+    sheet_(TAB.PENGGUNA).appendRow([id, nama, peranan, hashPin_(pin, salt), salt, 'ya', '', 'aktif', 0]);
+    log_(oleh || penggunaSheet_(), 'PENGGUNA_DITAMBAH', id + ' (' + peranan + ')');
+    return { id: id, nama: nama, pin: pin };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// PIN sementara baru, buka kunci akaun. Salt baru juga membatalkan semua sesi lama pengguna ini.
+function resetPin_(id, oleh) {
+  id = String(id || '').trim().toUpperCase();
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const u = cariPengguna_(id);
+    if (!u) throw new Error('ID ' + id + ' tidak dijumpai.');
+    const pin = pinRawak_();
+    const salt = Utilities.getUuid();
+    tulisPengguna_(u._row, { Hash_PIN: hashPin_(pin, salt), Salt: salt, Perlu_Tukar_PIN: 'ya', Dikunci_Hingga: '', Cubaan_Gagal: 0 });
+    log_(oleh, 'PIN_DIRESET', id);
+    return { id: id, nama: String(u.Nama), pin: pin };
   } finally {
     lock.releaseLock();
   }

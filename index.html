@@ -206,6 +206,8 @@
       <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M8 17c.8-1.8 2.2-2.6 4-2.6s3.2.8 4 2.6"/></svg>Pelajar</button>
     <button data-tab="laporan" id="navLaporan" hidden>
       <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 16v-4M12 16V8M15 16v-6"/></svg>Laporan</button>
+    <button data-tab="pengguna" id="navPengguna" hidden>
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.9-3 3-4.6 5.5-4.6s4.6 1.6 5.5 4.6"/><path d="M15.5 5.2a3 3 0 0 1 0 5.6M17.5 14.6c1.5.6 2.5 2 3 4.4"/></svg>Pengguna</button>
   </nav>
 
   <main>
@@ -267,6 +269,27 @@
       </div>
       <div class="list" id="senaraiPelajar"></div>
       <datalist id="dlKelas"></datalist>
+    </section>
+
+    <!-- PENGGUNA (admin) -->
+    <section id="tab-pengguna" hidden>
+      <h2 class="page">Urus pengguna</h2>
+      <form class="card" id="formPengguna" autocomplete="off">
+        <h3>Tambah pengguna</h3>
+        <p class="muted">ID dijana ikut peranan (PGW, GRU, ADM). PIN sementara dipaparkan sekali sahaja dan wajib ditukar semasa login pertama.</p>
+        <label class="f" for="pgNama">Nama penuh</label>
+        <input id="pgNama" maxlength="100" placeholder="Contoh: Cikgu Aminah">
+        <label class="f" for="pgPeranan">Peranan</label>
+        <select id="pgPeranan"><option value="">Pilih peranan</option><option value="PENGAWAS">Pengawas</option>
+          <option value="GURU">Guru disiplin</option><option value="ADMIN">Admin</option></select>
+        <button class="btn" id="btnTambahPengguna">Tambah pengguna</button>
+        <div id="msgPengguna"></div>
+      </form>
+      <div class="sechead"><h2>Senarai pengguna</h2><span class="muted" id="bilPengguna"></span></div>
+      <select id="pgfPeranan" style="margin-bottom:10px"><option value="">Semua peranan</option><option value="PENGAWAS">Pengawas</option>
+        <option value="GURU">Guru disiplin</option><option value="ADMIN">Admin</option></select>
+      <div class="list" id="senaraiPengguna"></div>
+      <p class="muted">Ketik pengguna untuk reset PIN atau tukar status. Pengguna tidak aktif terus dilog keluar.</p>
     </section>
 
     <!-- LAPORAN -->
@@ -391,10 +414,10 @@ $('btnKeluar').addEventListener('click', () => {
 
 // Kosongkan semua data dari skrin dan kembali ke login
 function keluarUI(pesan) {
-  Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], laporan: null, csv: null, sheetRekod: null });
-  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
+  Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], pengguna: [], laporan: null, csv: null, sheetRekod: null });
+  ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'senaraiPengguna', 'msgPengguna', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
     .forEach(id => $(id).innerHTML = '');
-  ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'mNama', 'mKelas', 'pfCari'].forEach(id => $(id).value = '');
+  ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'mNama', 'mKelas', 'pfCari', 'pgNama'].forEach(id => $(id).value = '');
   tutupSheet();
   $('toast').hidden = true;
   pilihTab('rekod');
@@ -424,6 +447,7 @@ async function mula() {
     $('who').hidden = false;
     $('navPelajar').hidden = d.user.peranan !== 'ADMIN';
     $('navLaporan').hidden = !['GURU', 'ADMIN'].includes(d.user.peranan);
+    $('navPengguna').hidden = d.user.peranan !== 'ADMIN';
     setKelas(d.kelas);
     const j = jamKL();
     $('lpDari').value = j.iso.slice(0, 8) + '01';
@@ -455,6 +479,7 @@ document.querySelectorAll('#nav button').forEach(b => b.addEventListener('click'
   if (b.dataset.tab === 'rekod') muatMurid();
   if (b.dataset.tab === 'hariini') muatHariIni();
   if (b.dataset.tab === 'pelajar') muatPelajar();
+  if (b.dataset.tab === 'pengguna') muatPengguna();
 }));
 
 // ---------- Jam ----------
@@ -550,6 +575,8 @@ $('sheet').addEventListener('click', async e => {
   if (e.target.id === 'shRekod') return uiSimpanRekod();
   if (e.target.id === 'shBatalRekod') return uiBatalRekod();
   if (e.target.id === 'shSimpanMurid') return uiSimpanMurid();
+  if (e.target.id === 'shResetPin') return uiResetPin();
+  if (e.target.id === 'shStatusPengguna') return uiStatusPengguna();
 });
 
 async function uiSimpanRekod() {
@@ -792,6 +819,87 @@ $('csvHasil').addEventListener('click', async e => {
     muatPelajar();
   } catch (err) { if (!sesiTamat(err)) msg($('csvHasil'), 'bad', esc(err.message)); }
 });
+
+// ---------- Pengguna (admin) ----------
+async function muatPengguna() {
+  if (!(S.pengguna || []).length) $('senaraiPengguna').innerHTML = '<div class="kosong">Memuatkan...</div>';
+  try { S.pengguna = await call('getSenaraiPengguna'); renderPengguna(); }
+  catch (e) { if (!sesiTamat(e)) $('senaraiPengguna').innerHTML = `<div class="kosong">${esc(e.message)}</div>`; }
+}
+
+function renderPengguna() {
+  const f = $('pgfPeranan').value;
+  const list = S.pengguna.filter(u => !f || u.peranan === f);
+  $('bilPengguna').textContent = `${list.length} pengguna`;
+  $('senaraiPengguna').innerHTML = list.length ? list.map(u => {
+    const nota = [u.perluTukarPin ? 'belum tukar PIN' : '', u.dikunciHingga ? `dikunci hingga ${u.dikunciHingga}` : ''].filter(Boolean);
+    return `<button class="item${u.aktif ? '' : ' mati'}" data-pengguna="${esc(u.id)}">
+      <span class="txt"><span class="nm">${esc(u.nama)}${u.sendiri ? ' (anda)' : ''}</span>
+      <span class="sub"> ${esc(u.id)} · ${esc(LABEL_PERANAN[u.peranan] || u.peranan)}${nota.length ? ' · ' + esc(nota.join(', ')) : ''}</span></span>
+      <span class="tag ${u.dikunciHingga ? 'bad' : u.aktif ? 'ok' : ''}">${u.dikunciHingga ? 'Dikunci' : u.aktif ? 'Aktif' : 'Tidak aktif'}</span></button>`;
+  }).join('') : '<div class="kosong">Tiada pengguna.</div>';
+}
+$('pgfPeranan').addEventListener('change', renderPengguna);
+
+function sheetPin(r, tajuk) {
+  bukaSheet(`<h3>${esc(tajuk)}</h3><div class="muted">${esc(r.nama)}</div>
+    <div class="waktu ok" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <span>ID: <b style="font-size:20px">${esc(r.id)}</b></span>
+      <span>PIN sementara: <b style="letter-spacing:4px">${esc(r.pin)}</b></span></div>
+    <p class="muted">Catat dan beri kepada pengguna secara peribadi. PIN ini <b>tidak akan dipaparkan lagi</b>. Pengguna wajib tukar PIN semasa login.</p>
+    <button class="btn" data-tutup>Saya dah catat</button>`);
+}
+
+$('formPengguna').addEventListener('submit', async e => {
+  e.preventDefault();
+  const el = $('msgPengguna'), btn = $('btnTambahPengguna');
+  const nama = $('pgNama').value.trim(), peranan = $('pgPeranan').value;
+  if (!nama || !peranan) return msg(el, 'bad', 'Isi nama dan pilih peranan.');
+  btn.disabled = true; msg(el, '', '');
+  try {
+    const r = await call('tambahPengguna', nama, peranan);
+    $('pgNama').value = ''; $('pgPeranan').value = '';
+    sheetPin(r, 'Pengguna ditambah');
+    muatPengguna();
+  } catch (err) { if (!sesiTamat(err)) msg(el, 'bad', esc(err.message)); }
+  finally { btn.disabled = false; }
+});
+
+$('senaraiPengguna').addEventListener('click', e => {
+  const b = e.target.closest('[data-pengguna]');
+  if (!b) return;
+  const u = S.pengguna.find(x => x.id === b.dataset.pengguna);
+  if (u.sendiri) return toast('Akaun anda sendiri tidak boleh diubah di sini.', true);
+  S.sheetPengguna = u;
+  bukaSheet(`<h3>${esc(u.nama)}</h3><div class="muted">${esc(u.id)} · ${esc(LABEL_PERANAN[u.peranan] || u.peranan)} · ${u.aktif ? 'aktif' : 'tidak aktif'}</div>
+    ${u.dikunciHingga ? `<div class="msg warn">Akaun dikunci hingga ${esc(u.dikunciHingga)} kerana PIN salah berulang kali. Reset PIN akan membuka kunci.</div>` : ''}
+    <button class="btn" id="shResetPin">Reset PIN</button>
+    <button class="btn ${u.aktif ? 'danger' : ''}" id="shStatusPengguna">${u.aktif ? 'Jadikan tidak aktif' : 'Aktifkan semula'}</button>
+    <button class="btn sec" data-tutup>Tutup</button>
+    <div id="shMsg"></div>`);
+});
+
+async function uiResetPin() {
+  const u = S.sheetPengguna, btn = $('shResetPin');
+  if (!confirm(`Reset PIN ${u.nama}? PIN lama tidak boleh digunakan lagi.`)) return;
+  btn.disabled = true;
+  try {
+    const r = await call('resetPinPengguna', u.id);
+    sheetPin(r, 'PIN direset');
+    muatPengguna();
+  } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
+}
+
+async function uiStatusPengguna() {
+  const u = S.sheetPengguna, btn = $('shStatusPengguna');
+  btn.disabled = true;
+  try {
+    await call('tukarStatusPengguna', u.id, !u.aktif);
+    tutupSheet();
+    toast(`${u.nama} kini ${u.aktif ? 'tidak aktif' : 'aktif'}.`);
+    muatPengguna();
+  } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
+}
 
 // ---------- Laporan ----------
 $('btnJana').addEventListener('click', async () => {
