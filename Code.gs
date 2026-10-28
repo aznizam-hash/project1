@@ -25,7 +25,7 @@ const CONFIG = {
 
 const TAB = { MURID: 'Murid', REKOD: 'Rekod', PENGGUNA: 'Pengguna', TETAPAN: 'Tetapan', LOG: 'LogAudit' };
 const HEADERS = {
-  Murid: ['ID_Murid', 'Nama', 'Tingkatan', 'Kelas', 'Status'],
+  Murid: ['ID_Murid', 'Nama', 'Tingkatan', 'Kelas', 'Status', 'Tarikh_Tidak_Aktif'],
   Rekod: ['ID_Rekod', 'Tarikh', 'Masa_Tiba', 'ID_Murid', 'Kelas', 'ID_Pengguna', 'Sebab', 'Lewat', 'Status',
     'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal'],
   Pengguna: ['ID_Pengguna', 'Nama', 'Peranan', 'Hash_PIN', 'Salt', 'Perlu_Tukar_PIN', 'Dikunci_Hingga', 'Status', 'Cubaan_Gagal'],
@@ -80,7 +80,12 @@ function setupSheets() {
 
   // Kolum teks supaya Sheets tak tukar jadi tarikh/nombor
   ss.getSheetByName(TAB.MURID).getRange('A:B').setNumberFormat('@');
-  ss.getSheetByName(TAB.MURID).getRange('D:E').setNumberFormat('@');
+  ss.getSheetByName(TAB.MURID).getRange('D:F').setNumberFormat('@');
+  // Tab Murid lama tak ada lajur Tarikh_Tidak_Aktif. Tambah header sahaja, data tak diubah
+  const hdrMurid = ss.getSheetByName(TAB.MURID).getRange(1, 1, 1, HEADERS.Murid.length).getValues()[0];
+  if (String(hdrMurid[5] || '').trim() !== 'Tarikh_Tidak_Aktif') {
+    ss.getSheetByName(TAB.MURID).getRange(1, 6).setValue('Tarikh_Tidak_Aktif').setFontWeight('bold');
+  }
   ss.getSheetByName(TAB.REKOD).getRange('A:I').setNumberFormat('@');
   ss.getSheetByName(TAB.PENGGUNA).getRange('A:F').setNumberFormat('@');
   ss.getSheetByName(TAB.TETAPAN).getRange('A:B').setNumberFormat('@');
@@ -176,7 +181,8 @@ function senaraiPemadaman_(potong) {
     const t = tarikhNormal_(r.Masa);
     return t && t < potong;
   });
-  return { rekod: rekod, log: log };
+  const murid = readMurid_().filter(function (m) { return !m.aktif && m.tarikhTakAktif && m.tarikhTakAktif < potong; });
+  return { rekod: rekod, log: log, murid: murid };
 }
 
 // Fail backup dalam folder yang sama dengan Sheet, dibuat sebelum tarikh potong
@@ -216,6 +222,7 @@ function menuSemakPemadaman() {
   ui.alert('Tarikh potong: ' + potong + ' (' + CONFIG.SIMPAN_TAHUN + ' tahun).\n\n' +
     'Rekod yang akan dipadam: ' + s.rekod.length + '\n' +
     'Entri LogAudit yang akan dipadam: ' + s.log.length + '\n' +
+    'Murid tidak aktif yang akan dipadam: ' + s.murid.length + '\n' +
     'Salinan backup yang akan dipindah ke Trash: ' + fail.length + '\n\n' +
     'Tiada apa dipadam setakat ni.');
 }
@@ -226,13 +233,21 @@ function pemadamanAuto() {
   if (!lock.tryLock(20000)) return;
   try {
     const potong = tarikhPotong_();
+    // Murid tidak aktif yang belum ada tarikh (dari sebelum lajur ni wujud) mula dikira hari ini
+    const tanpaTarikh = readMurid_().filter(function (m) { return !m.aktif && !m.tarikhTakAktif; });
+    if (tanpaTarikh.length) {
+      const sh = sheet_(TAB.MURID);
+      const hariIni = fmt_(new Date(), 'yyyy-MM-dd');
+      tanpaTarikh.forEach(function (m) { sh.getRange(m._row, 6).setValue(hariIni); });
+    }
     const s = senaraiPemadaman_(potong);
     const fail = backupLama_(potong);
     if (s.rekod.length) padamBaris_(sheet_(TAB.REKOD), s.rekod.map(function (r) { return r._row; }));
     if (s.log.length) padamBaris_(sheet_(TAB.LOG), s.log.map(function (r) { return r._row; }));
+    if (s.murid.length) padamBaris_(sheet_(TAB.MURID), s.murid.map(function (m) { return m._row; }));
     fail.forEach(function (f) { f.setTrashed(true); });
     log_('SISTEM', 'PEMADAMAN_AUTO', 'Potong ' + potong + ': rekod ' + s.rekod.length +
-      ', log ' + s.log.length + ', backup ' + fail.length);
+      ', log ' + s.log.length + ', murid ' + s.murid.length + ', backup ' + fail.length);
   } finally {
     lock.releaseLock();
   }
@@ -579,7 +594,8 @@ function kemaskiniMurid(token, idMurid, input) {
     const aktif = input.aktif !== false;
     const sama = semua.find(function (x) { return x.id !== lama.id && x.aktif && kunciMurid_(x) === kunciMurid_(m); });
     if (sama && aktif) throw new Error(m.nama + ' sudah ada dalam ' + sama.label + ' (' + sama.id + ').');
-    sheet_(TAB.MURID).getRange(lama._row, 2, 1, 4).setValues([[m.nama, m.tingkatan, m.kelas, aktif ? 'aktif' : 'tidak aktif']]);
+    const tarikhBaru = aktif ? '' : (lama.aktif ? fmt_(new Date(), 'yyyy-MM-dd') : lama.tarikhTakAktif);
+    sheet_(TAB.MURID).getRange(lama._row, 2, 1, 5).setValues([[m.nama, m.tingkatan, m.kelas, aktif ? 'aktif' : 'tidak aktif', tarikhBaru]]);
     const ubah = [];
     if (lama.nama !== m.nama) ubah.push('nama ' + lama.nama + ' -> ' + m.nama);
     if (lama.label !== m.tingkatan + ' ' + m.kelas) ubah.push('kelas ' + lama.label + ' -> ' + m.tingkatan + ' ' + m.kelas);
@@ -598,7 +614,8 @@ function tukarStatusMurid(token, idMurid, aktif) {
   try {
     const m = readMurid_().find(function (x) { return x.id === String(idMurid); });
     if (!m) throw new Error('Murid tidak dijumpai.');
-    sheet_(TAB.MURID).getRange(m._row, 5).setValue(aktif ? 'aktif' : 'tidak aktif');
+    const tarikhBaru = aktif ? '' : (m.aktif ? fmt_(new Date(), 'yyyy-MM-dd') : m.tarikhTakAktif);
+    sheet_(TAB.MURID).getRange(m._row, 5, 1, 2).setValues([[aktif ? 'aktif' : 'tidak aktif', tarikhBaru]]);
     log_(user.id, 'MURID_STATUS', m.id + ' -> ' + (aktif ? 'aktif' : 'tidak aktif'));
     return { senaraiKelas: senaraiKelas_() };
   } finally {
@@ -635,14 +652,20 @@ function simpanImportMurid(token, data) {
     // Kemas kini Nama, Tingkatan, Kelas dan Status sekali gus (lebih laju daripada satu sel satu panggilan)
     const sh = sheet_(TAB.MURID);
     if (semua.length) {
-      const v = sh.getRange(2, 2, sh.getLastRow() - 1, 4).getValues();
+      // Lajur: Nama, Tingkatan, Kelas, Status, Tarikh_Tidak_Aktif
+      const v = sh.getRange(2, 2, sh.getLastRow() - 1, 5).getValues();
+      const hariIni = fmt_(new Date(), 'yyyy-MM-dd');
       p.kemaskini.forEach(function (x) {
         const r = v[x.sedia._row - 2];
         r[0] = x.baru.nama; r[1] = x.baru.tingkatan; r[2] = x.baru.kelas;
       });
-      p.aktifSemula.forEach(function (m) { v[m._row - 2][3] = 'aktif'; });
-      p.tidakAktif.forEach(function (m) { v[m._row - 2][3] = 'tidak aktif'; });
-      sh.getRange(2, 2, v.length, 4).setValues(v);
+      p.aktifSemula.forEach(function (m) { v[m._row - 2][3] = 'aktif'; v[m._row - 2][4] = ''; });
+      p.tidakAktif.forEach(function (m) {
+        v[m._row - 2][3] = 'tidak aktif';
+        if (m.aktif) v[m._row - 2][4] = hariIni;
+        else v[m._row - 2][4] = m.tarikhTakAktif || hariIni;
+      });
+      sh.getRange(2, 2, v.length, 5).setValues(v);
     }
     let seq = seqMurid_(semua);
     const rows = p.baru.map(function (m) { return [idMuridBaru_(seq++), m.nama, m.tingkatan, m.kelas, 'aktif']; });
@@ -989,7 +1012,8 @@ function readMurid_() {
     const kelas = String(r.Kelas).trim();
     return {
       id: String(r.ID_Murid).trim(), nama: String(r.Nama).trim(), tingkatan: ting, kelas: kelas,
-      label: ting + ' ' + kelas, aktif: String(r.Status).trim().toLowerCase() !== 'tidak aktif', _row: r._row
+      label: ting + ' ' + kelas, aktif: String(r.Status).trim().toLowerCase() !== 'tidak aktif', _row: r._row,
+      tarikhTakAktif: tarikhNormal_(r.Tarikh_Tidak_Aktif)
     };
   });
 }
