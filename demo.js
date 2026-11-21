@@ -59,7 +59,7 @@
         const minit = 21 + rand(39);
         const masa = '07:' + String(minit).padStart(2, '0') + ':' + String(rand(60)).padStart(2, '0');
         rekod.push(['RDEMO' + d + '-' + j, fmt(t, 'yyyy-MM-dd'), masa, m[0], m[2] + ' ' + m[3], 'PGW001',
-          rand(3) ? sebab[rand(sebab.length)] : '', 'ya', 'menunggu semakan', '', '', '', 'tidak', '', '', '']);
+          rand(3) ? sebab[rand(sebab.length)] : '', 'ya', '', '', '', '', 'tidak', '', '', '']);
       }
     }
     return {
