@@ -89,6 +89,9 @@ Log tidak boleh dipadam atau diubah dari web app. Hanya orang yang ada akses edi
 
 - Tab **Rekod**: cari murid ikut nama atau ID, ketik nama, pilih sebab (pilihan, boleh kosong), tekan **Rekod jam HH:MM**.
 - Masa tiba dicap oleh server, bukan dari jam telefon. Masa tidak boleh diubah selepas disimpan.
+- **Rekod dimasukkan lambat:** jika murid sampai lebih awal daripada masa rekod (contoh sampai 07:50, direkod 12:58), tekan **Tukar masa tiba** dan isi masa sebenar sebelum tekan Rekod. Pengawas, guru disiplin dan admin boleh buat ini. Masa tiba tidak boleh selepas masa sekarang atau sebelum 06:00, dan mesti hari yang sama.
+- Masa butang ditekan tetap disimpan dalam lajur `Masa_Rekod` (lajur terakhir tab `Rekod`). Rekod yang masa tibanya diisi manual dipaparkan dengan "direkod HH:MM" dalam Hari ini dan Laporan, dan dicatat dalam `LogAudit`.
+- Tab `Rekod` lama tiada lajur `Masa_Rekod`. Header ditambah secara automatik pada rekod pertama selepas kemas kini; data lama tidak diubah dan lajur itu kosong untuk rekod lama.
 - Selepas `had_lewat` (asal 07:20) dikira lewat. Tepat 07:20 tidak lewat. Rekod sebelum had tetap disimpan tapi ditanda **tidak lewat** dan tidak masuk laporan.
 - Seorang murid hanya boleh direkod sekali sehari. Murid yang sudah direkod tunjuk masa rekod dalam senarai.
 
@@ -156,6 +159,7 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Guru disiplin naikkan satu kes, kemudian tarik balik. Status dalam tab Rekod jadi `dinaikkan` kemudian kosong. Pengawas tak nampak pilihan ni.
 - [ ] Laporan: pilih 3 rekod, tekan Naikkan. Ketiga-tiga jadi `dinaikkan` dalam tab Rekod, dan 3 entri `REKOD_DINAIKKAN` bertanda `[pukal]` dalam `LogAudit`.
 - [ ] Ketik murid yang sama sekali lagi: keluar mesej "Sudah direkod hari ini".
+- [ ] Rekod murid dengan **Tukar masa tiba** (contoh 07:50). `Masa_Tiba` = 07:50:00, `Masa_Rekod` = masa sebenar tekan butang, dan laporan tunjuk "direkod HH:MM". Cuba masa selepas jam sekarang: ditolak.
 - [ ] Rekod sebelum atau tepat 07:20: disimpan dengan `Lewat = tidak`, tidak masuk laporan.
 - [ ] Pengawas hanya nampak tab Rekod dan Hari ini, dan hanya rekod sendiri dalam Hari ini.
 - [ ] Guru disiplin tidak boleh batal rekod pengawas. Admin boleh, dengan catatan.
