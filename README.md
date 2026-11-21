@@ -94,12 +94,13 @@ Log tidak boleh dipadam atau diubah dari web app. Hanya orang yang ada akses edi
 
 ## Tindakan disiplin (guru disiplin dan admin)
 
-- Rekod lewat bermula dengan status **menunggu semakan**.
-- Guru disiplin dan admin boleh tandakan **sah** atau **dinaikkan**, dengan catatan pilihan. Boleh buat dari tab **Hari ini** (rekod hari ini) atau dari **Laporan > Senarai rekod** (mana-mana tarikh).
+- Setiap rekod lewat ialah **kes biasa**. Tiada semakan diperlukan, dan semua rekod lewat (kecuali yang dibatalkan) dikira dalam laporan.
+- Guru disiplin dan admin hanya **naikkan** kes yang perlu tindakan lanjut, dengan catatan pilihan. Boleh buat dari tab **Hari ini** (rekod hari ini) atau dari **Laporan > Senarai rekod** (mana-mana tarikh). Kes yang tersalah naik boleh **ditarik balik** jadi kes biasa.
+- Rekod lama berstatus `menunggu semakan` atau `sah` dikira kes biasa. Data dalam Sheet tidak diubah.
 - Catatan kosong tak menggantikan catatan lama.
-- **Sah pukal:** dalam **Laporan > Senarai rekod**, tanda kotak pada rekod yang menunggu semakan (atau **Pilih semua menunggu semakan**), tekan **Tandakan**, pilih sah atau dinaikkan, dan catatan jika perlu. Maksimum 200 rekod sekali gus. Rekod yang sudah disemak orang lain atau dibatalkan dilangkau, bukan ditimpa.
-- Setiap semakan disimpan dalam Rekod: Status, Catatan_Disiplin, ID_Disiplin dan Tarikh_Semakan. Dicatat juga dalam `LogAudit` sebagai `REKOD_SEMAK`.
-- Pengawas tak boleh buat semakan. Rekod dibatalkan tak boleh disemak.
+- **Naik pukal:** dalam **Laporan > Senarai rekod**, tanda kotak pada beberapa rekod (atau **Pilih semua**), tekan **Naikkan**, isi catatan jika perlu. Maksimum 200 rekod sekali gus. Rekod yang sudah dinaikkan atau dibatalkan dilangkau.
+- Setiap tindakan disimpan dalam Rekod: Status (`dinaikkan` atau kosong), Catatan_Disiplin, ID_Disiplin dan Tarikh_Semakan. Dicatat juga dalam `LogAudit` sebagai `REKOD_DINAIKKAN` atau `REKOD_TARIK_BALIK`.
+- Pengawas tak boleh naikkan kes. Rekod dibatalkan tak boleh dinaikkan.
 
 ## Batal rekod
 
@@ -152,8 +153,8 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Biar pengawas tak buat apa-apa 3 minit, kemudian tekan apa-apa: kembali ke skrin login.
 - [ ] Kalau Google sendiri yang sekat URL web app, mungkin setting domain tak benarkan.
 - [ ] Rekod seorang murid, kemudian semak baris baru dalam tab `Rekod` (masa diisi server).
-- [ ] Guru disiplin tandakan rekod lewat sebagai `sah` atau `dinaikkan`. Pengawas tak nampak pilihan ni.
-- [ ] Laporan: pilih 3 rekod menunggu semakan, tekan Tandakan > Sah. Ketiga-tiga jadi `sah` dalam tab Rekod, dan 3 entri `REKOD_SEMAK` bertanda `[pukal]` dalam `LogAudit`.
+- [ ] Guru disiplin naikkan satu kes, kemudian tarik balik. Status dalam tab Rekod jadi `dinaikkan` kemudian kosong. Pengawas tak nampak pilihan ni.
+- [ ] Laporan: pilih 3 rekod, tekan Naikkan. Ketiga-tiga jadi `dinaikkan` dalam tab Rekod, dan 3 entri `REKOD_DINAIKKAN` bertanda `[pukal]` dalam `LogAudit`.
 - [ ] Ketik murid yang sama sekali lagi: keluar mesej "Sudah direkod hari ini".
 - [ ] Rekod sebelum atau tepat 07:20: disimpan dengan `Lewat = tidak`, tidak masuk laporan.
 - [ ] Pengawas hanya nampak tab Rekod dan Hari ini, dan hanya rekod sendiri dalam Hari ini.

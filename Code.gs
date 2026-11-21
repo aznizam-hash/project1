@@ -17,7 +17,7 @@ const CONFIG = {
   MAKS_HARI_LAPORAN: 366,
   SIMPAN_TAHUN: 2,           // rekod dan backup dipadam selepas tempoh ini (keputusan sekolah)
   MAKS_IMPORT: 3000,
-  MAKS_SEMAK_PUKAL: 200,     // sama dengan had paparan Senarai rekod dalam Laporan
+  MAKS_NAIK_PUKAL: 200,     // sama dengan had paparan Senarai rekod dalam Laporan
   SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 15 }, // tamat jika tiada aktiviti (keputusan sekolah: admin 15 minit)
   HAD_CUBAAN: 5,             // PIN salah berturut-turut sebelum akaun dikunci
   KUNCI_MINIT: 15,
@@ -447,7 +447,7 @@ function simpanRekod(token, idMurid, sebab) {
     const row = {
       ID_Rekod: id, Tarikh: t.tarikh, Masa_Tiba: t.masa, ID_Murid: idMurid, Kelas: clean_(m.label, 40),
       ID_Pengguna: user.id, Sebab: sebab, Lewat: lewat ? 'ya' : 'tidak',
-      Status: lewat ? 'menunggu semakan' : '', Dibatalkan: 'tidak'
+      Status: '', Dibatalkan: 'tidak'
     };
     // Tulis sebagai teks supaya Sheets tidak menukar Tarikh dan Masa_Tiba kepada format tarikh/masa
     const sh = sheet_(TAB.REKOD);
@@ -485,39 +485,39 @@ function getRekodHariIni(token) {
   }).reverse();
 }
 
-// Guru disiplin atau admin tandakan rekod lewat: sah atau dinaikkan. Catatan kosong = kekalkan catatan lama.
+// Rekod lewat ialah kes biasa (Status kosong) kecuali guru disiplin atau admin naikkan untuk tindakan lanjut.
+// status 'dinaikkan' = naikkan, '' = tarik balik jadi kes biasa. Catatan kosong = kekalkan catatan lama.
 function semakRekod(token, idRekod, status, catatan) {
   const user = requireUser_(token, ['GURU', 'ADMIN']);
   status = String(status || '').trim();
-  if (status !== 'sah' && status !== 'dinaikkan') throw new Error('Tindakan mesti sah atau dinaikkan.');
+  if (status !== 'dinaikkan' && status !== '') throw new Error('Tindakan tidak sah.');
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     const r = readRekod_().find(function (x) { return x.id === String(idRekod); });
     if (!r) throw new Error('Rekod tidak dijumpai.');
     if (r.batal) throw new Error('Rekod ini sudah dibatalkan.');
-    if (!r.lewat) throw new Error('Hanya rekod lewat boleh disemak.');
-    const c = clean_(catatan, 200) || r.catatanDisiplin;
+    if (!r.lewat) throw new Error('Hanya rekod lewat boleh dinaikkan.');
+    const c = clean_(catatan, 200) || clean_(r.catatanDisiplin, 200);
     const cols = HEADERS.Rekod.indexOf('Status') + 1;
     const sh = sheet_(TAB.REKOD);
     const julat = sh.getRange(r._row, cols, 1, 4);
     julat.setNumberFormat('@');
     julat.setValues([[status, c, user.id, fmt_(new Date(), 'yyyy-MM-dd HH:mm:ss')]]);
-    log_(user.id, 'REKOD_SEMAK', r.id + ' -> ' + status + (c ? ': ' + c : ''));
+    log_(user.id, status ? 'REKOD_DINAIKKAN' : 'REKOD_TARIK_BALIK', r.id + (c ? ': ' + c : ''));
     return true;
   } finally {
     lock.releaseLock();
   }
 }
 
-// Semakan pukal dari Laporan. Hanya rekod yang masih menunggu semakan dikemas kini;
-// rekod yang sudah disemak orang lain, dibatalkan atau tidak lewat dilangkau.
-function semakRekodPukal(token, ids, status, catatan) {
+// Naikkan beberapa kes sekali gus dari Laporan. Rekod yang sudah dinaikkan, dibatalkan
+// atau tidak lewat dilangkau.
+function naikkanRekodPukal(token, ids, catatan) {
   const user = requireUser_(token, ['GURU', 'ADMIN']);
-  status = String(status || '').trim();
-  if (status !== 'sah' && status !== 'dinaikkan') throw new Error('Tindakan mesti sah atau dinaikkan.');
+  const status = 'dinaikkan';
   if (!Array.isArray(ids) || !ids.length) throw new Error('Tiada rekod dipilih.');
-  if (ids.length > CONFIG.MAKS_SEMAK_PUKAL) throw new Error('Maksimum ' + CONFIG.MAKS_SEMAK_PUKAL + ' rekod sekali gus.');
+  if (ids.length > CONFIG.MAKS_NAIK_PUKAL) throw new Error('Maksimum ' + CONFIG.MAKS_NAIK_PUKAL + ' rekod sekali gus.');
   const dipilih = {};
   ids.forEach(function (id) { dipilih[String(id)] = true; });
 
@@ -527,8 +527,7 @@ function semakRekodPukal(token, ids, status, catatan) {
     const kini = fmt_(new Date(), 'yyyy-MM-dd HH:mm:ss');
     const catatanBaru = clean_(catatan, 200);
     const sasaran = readRekod_().filter(function (r) {
-      const st = r.status.trim();
-      return dipilih[r.id] && r.lewat && !r.batal && (!st || st === 'menunggu semakan');
+      return dipilih[r.id] && r.lewat && !r.batal && r.status !== 'dinaikkan';
     }).sort(function (a, b) { return a._row - b._row; });
 
     // Tulis setiap kumpulan baris berturutan sekali gus, bukan satu baris satu panggilan
@@ -550,8 +549,8 @@ function semakRekodPukal(token, ids, status, catatan) {
     const log = SpreadsheetApp.getActive().getSheetByName(TAB.LOG);
     if (log && sasaran.length) {
       log.getRange(log.getLastRow() + 1, 1, sasaran.length, 4).setValues(sasaran.map(function (r) {
-        return [new Date(), clean_(user.id, 60), 'REKOD_SEMAK',
-          clean_('[pukal] ' + r.id + ' -> ' + status + (catatanBaru ? ': ' + catatanBaru : ''), 300)];
+        return [new Date(), clean_(user.id, 60), 'REKOD_DINAIKKAN',
+          clean_('[pukal] ' + r.id + (catatanBaru ? ': ' + catatanBaru : ''), 300)];
       }));
     }
     return { ids: sasaran.map(function (r) { return r.id; }), dilangkau: Object.keys(dipilih).length - sasaran.length };
@@ -1107,7 +1106,8 @@ function readRekod_() {
       oleh: String(r.ID_Pengguna),
       sebab: String(r.Sebab),
       lewat: String(r.Lewat).trim().toLowerCase() === 'ya',
-      status: String(r.Status),
+      // Hanya 'dinaikkan' bermakna. Nilai lama (menunggu semakan, sah) dikira kes biasa.
+      status: String(r.Status).trim() === 'dinaikkan' ? 'dinaikkan' : '',
       catatanDisiplin: String(r.Catatan_Disiplin || ''),
       batal: String(r.Dibatalkan).trim().toLowerCase() === 'ya',
       _row: r._row
