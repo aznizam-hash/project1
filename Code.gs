@@ -17,6 +17,7 @@ const CONFIG = {
   MAKS_HARI_LAPORAN: 366,
   SIMPAN_TAHUN: 2,           // rekod dan backup dipadam selepas tempoh ini (keputusan sekolah)
   MAKS_IMPORT: 3000,
+  MAKS_SEMAK_PUKAL: 200,     // sama dengan had paparan Senarai rekod dalam Laporan
   SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 15 }, // tamat jika tiada aktiviti (keputusan sekolah: admin 15 minit)
   HAD_CUBAAN: 5,             // PIN salah berturut-turut sebelum akaun dikunci
   KUNCI_MINIT: 15,
@@ -504,6 +505,56 @@ function semakRekod(token, idRekod, status, catatan) {
     julat.setValues([[status, c, user.id, fmt_(new Date(), 'yyyy-MM-dd HH:mm:ss')]]);
     log_(user.id, 'REKOD_SEMAK', r.id + ' -> ' + status + (c ? ': ' + c : ''));
     return true;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Semakan pukal dari Laporan. Hanya rekod yang masih menunggu semakan dikemas kini;
+// rekod yang sudah disemak orang lain, dibatalkan atau tidak lewat dilangkau.
+function semakRekodPukal(token, ids, status, catatan) {
+  const user = requireUser_(token, ['GURU', 'ADMIN']);
+  status = String(status || '').trim();
+  if (status !== 'sah' && status !== 'dinaikkan') throw new Error('Tindakan mesti sah atau dinaikkan.');
+  if (!Array.isArray(ids) || !ids.length) throw new Error('Tiada rekod dipilih.');
+  if (ids.length > CONFIG.MAKS_SEMAK_PUKAL) throw new Error('Maksimum ' + CONFIG.MAKS_SEMAK_PUKAL + ' rekod sekali gus.');
+  const dipilih = {};
+  ids.forEach(function (id) { dipilih[String(id)] = true; });
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const kini = fmt_(new Date(), 'yyyy-MM-dd HH:mm:ss');
+    const catatanBaru = clean_(catatan, 200);
+    const sasaran = readRekod_().filter(function (r) {
+      const st = r.status.trim();
+      return dipilih[r.id] && r.lewat && !r.batal && (!st || st === 'menunggu semakan');
+    }).sort(function (a, b) { return a._row - b._row; });
+
+    // Tulis setiap kumpulan baris berturutan sekali gus, bukan satu baris satu panggilan
+    const sh = sheet_(TAB.REKOD);
+    const col = HEADERS.Rekod.indexOf('Status') + 1;
+    let i = 0;
+    while (i < sasaran.length) {
+      let j = i;
+      while (j + 1 < sasaran.length && sasaran[j + 1]._row === sasaran[j]._row + 1) j++;
+      const kump = sasaran.slice(i, j + 1);
+      const julat = sh.getRange(kump[0]._row, col, kump.length, 4);
+      julat.setNumberFormat('@');
+      julat.setValues(kump.map(function (r) {
+        return [status, catatanBaru || clean_(r.catatanDisiplin, 200), user.id, kini];
+      }));
+      i = j + 1;
+    }
+
+    const log = SpreadsheetApp.getActive().getSheetByName(TAB.LOG);
+    if (log && sasaran.length) {
+      log.getRange(log.getLastRow() + 1, 1, sasaran.length, 4).setValues(sasaran.map(function (r) {
+        return [new Date(), clean_(user.id, 60), 'REKOD_SEMAK',
+          clean_('[pukal] ' + r.id + ' -> ' + status + (catatanBaru ? ': ' + catatanBaru : ''), 300)];
+      }));
+    }
+    return { ids: sasaran.map(function (r) { return r.id; }), dilangkau: Object.keys(dipilih).length - sasaran.length };
   } finally {
     lock.releaseLock();
   }

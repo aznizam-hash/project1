@@ -97,6 +97,7 @@ Log tidak boleh dipadam atau diubah dari web app. Hanya orang yang ada akses edi
 - Rekod lewat bermula dengan status **menunggu semakan**.
 - Guru disiplin dan admin boleh tandakan **sah** atau **dinaikkan**, dengan catatan pilihan. Boleh buat dari tab **Hari ini** (rekod hari ini) atau dari **Laporan > Senarai rekod** (mana-mana tarikh).
 - Catatan kosong tak menggantikan catatan lama.
+- **Sah pukal:** dalam **Laporan > Senarai rekod**, tanda kotak pada rekod yang menunggu semakan (atau **Pilih semua menunggu semakan**), tekan **Tandakan**, pilih sah atau dinaikkan, dan catatan jika perlu. Maksimum 200 rekod sekali gus. Rekod yang sudah disemak orang lain atau dibatalkan dilangkau, bukan ditimpa.
 - Setiap semakan disimpan dalam Rekod: Status, Catatan_Disiplin, ID_Disiplin dan Tarikh_Semakan. Dicatat juga dalam `LogAudit` sebagai `REKOD_SEMAK`.
 - Pengawas tak boleh buat semakan. Rekod dibatalkan tak boleh disemak.
 
@@ -152,6 +153,7 @@ Lepas ubah kod: **Deploy > Manage deployments > Edit (ikon pensel) > Version: Ne
 - [ ] Kalau Google sendiri yang sekat URL web app, mungkin setting domain tak benarkan.
 - [ ] Rekod seorang murid, kemudian semak baris baru dalam tab `Rekod` (masa diisi server).
 - [ ] Guru disiplin tandakan rekod lewat sebagai `sah` atau `dinaikkan`. Pengawas tak nampak pilihan ni.
+- [ ] Laporan: pilih 3 rekod menunggu semakan, tekan Tandakan > Sah. Ketiga-tiga jadi `sah` dalam tab Rekod, dan 3 entri `REKOD_SEMAK` bertanda `[pukal]` dalam `LogAudit`.
 - [ ] Ketik murid yang sama sekali lagi: keluar mesej "Sudah direkod hari ini".
 - [ ] Rekod sebelum atau tepat 07:20: disimpan dengan `Lewat = tidak`, tidak masuk laporan.
 - [ ] Pengawas hanya nampak tab Rekod dan Hari ini, dan hanya rekod sendiri dalam Hari ini.

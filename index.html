@@ -82,6 +82,19 @@
   .tag.ok { background:var(--ok-soft); color:var(--ok); }
   button.tag { border:0; }
   .item button.txt { border:0; background:none; padding:0; text-align:left; cursor:pointer; }
+  /* Pilih rekod untuk semakan pukal (Laporan) */
+  .pilih { display:flex; align-items:center; justify-content:center; width:44px; min-height:44px; margin:-10px 0 -10px -12px; flex:none; cursor:pointer; }
+  .pilih input { width:22px; height:22px; margin:0; padding:0; accent-color:var(--pri); cursor:pointer; }
+  .pilih.kosong-pilih { cursor:default; }
+  .item.dipilih { background:var(--pri-soft); }
+  .pilihsemua { display:flex; align-items:center; gap:4px; padding:4px 16px 4px 16px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600; }
+  .barpukal { position:fixed; left:0; right:0; bottom:calc(64px + env(safe-area-inset-bottom)); z-index:14; padding:0 16px 10px; }
+  .barpukal > div { max-width:560px; margin:0 auto; display:flex; align-items:center; gap:10px; background:var(--ink); color:#fff;
+                    border-radius:14px; padding:8px 8px 8px 16px; box-shadow:0 6px 20px rgba(0,0,0,.2); }
+  .barpukal span { flex:1; font-size:14px; }
+  .barpukal .btn { width:auto; margin:0; padding:12px 16px; min-height:44px; }
+  .barpukal .link { color:#cbd5e1; min-height:44px; padding:0 6px; }
+  body.ada-bar main { padding-bottom:170px; }
 
   .msg { padding:10px 12px; border-radius:10px; margin-top:12px; font-size:14px; }
   .msg.bad { background:var(--bad-soft); color:var(--bad); }
@@ -362,6 +375,11 @@
         <div id="msgLaporan"></div>
       </div>
       <div id="hasilLaporan"></div>
+      <div class="barpukal" id="barPukal" hidden><div>
+        <span id="barPukalTeks"></span>
+        <button class="link" id="btnBatalPilih">Batal</button>
+        <button class="btn" id="btnSemakPukal">Tandakan</button>
+      </div></div>
     </section>
   </main>
 </div>
@@ -372,7 +390,7 @@
 <script>
 // Token sesi disimpan dalam memori sahaja (bukan localStorage). Refresh halaman = log masuk semula.
 const S = { token: null, idleMs: 0, tamatMs: 0, akhir: 0, offset: 0, init: null,
-  murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], laporan: null, csv: null, sheetRekod: null };
+  murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], laporan: null, csv: null, sheetRekod: null, pilih: new Set() };
 const $ = id => document.getElementById(id);
 const TZ = 'Asia/Kuala_Lumpur';
 const HARI = { Sun: 'Ahad', Mon: 'Isnin', Tue: 'Selasa', Wed: 'Rabu', Thu: 'Khamis', Fri: 'Jumaat', Sat: 'Sabtu' };
@@ -472,13 +490,14 @@ $('btnKeluar').addEventListener('click', () => {
 
 // Kosongkan semua data dari skrin dan kembali ke login
 function keluarUI(pesan) {
-  Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], pengguna: [], laporan: null, csv: null, sheetRekod: null });
+  Object.assign(S, { token: null, init: null, murid: [], hariIni: {}, rekodHariIni: [], pelajar: [], pengguna: [], laporan: null, csv: null, sheetRekod: null, pilih: new Set() });
   pilihSeg('pengguna');
   S.log = null; $('btnCsvLog').hidden = true; $('bilLog').textContent = '';
   ['senaraiMurid', 'senaraiHariIni', 'senaraiPelajar', 'senaraiPengguna', 'msgPengguna', 'msgTetapan', 'tsSebab', 'senaraiLog', 'msgLog', 'hasilLaporan', 'csvHasil', 'msgMurid', 'msgLaporan', 'msgTukarPin']
     .forEach(id => $(id).innerHTML = '');
   ['tpLama', 'tpBaru', 'tpSah', 'lgId', 'lgPin', 'cari', 'mNama', 'mKelas', 'pfCari', 'pgNama'].forEach(id => $(id).value = '');
   tutupSheet();
+  $('barPukal').hidden = true; document.body.classList.remove('ada-bar');
   $('toast').hidden = true;
   pilihTab('rekod');
   $('app').hidden = true; $('skrinTukarPin').hidden = true; $('who').hidden = true;
@@ -637,6 +656,7 @@ $('sheet').addEventListener('click', async e => {
   if (e.target.id === 'shRekod') return uiSimpanRekod();
   if (e.target.id === 'shBatalRekod') return uiBatalRekod();
   if (e.target.id === 'shSimpanSemak') return uiSimpanSemak();
+  if (e.target.id === 'shSemakPukal') return uiSemakPukal();
   if (e.target.id === 'shSimpanMurid') return uiSimpanMurid();
   if (e.target.id === 'shResetPin') return uiResetPin();
   if (e.target.id === 'shStatusPengguna') return uiStatusPengguna();
@@ -1084,6 +1104,7 @@ $('btnJana').addEventListener('click', async () => {
   btn.disabled = true; msg(el, '', '');
   try {
     S.laporan = await call('getLaporan', { dari: $('lpDari').value, hingga: $('lpHingga').value, kelas: $('lpKelas').value });
+    S.pilih = new Set();
     renderLaporan();
   } catch (e) { if (!sesiTamat(e)) { $('hasilLaporan').innerHTML = ''; msg(el, 'bad', esc(e.message)); } }
   finally { btn.disabled = false; }
@@ -1095,8 +1116,12 @@ function senaraiKira(list, kosong) {
     : `<div class="kosong">${kosong}</div>`}</div>`;
 }
 
+const menunggu = x => !x.status || x.status === 'menunggu semakan';
+
 function renderLaporan() {
   const r = S.laporan;
+  const papar = r.list.slice(0, 200);
+  const bolehPilih = papar.filter(menunggu).length;
   const [y, mo] = r.bulan.split('-');
   $('hasilLaporan').innerHTML = `
     <div class="stats">
@@ -1108,10 +1133,70 @@ function renderLaporan() {
     <div class="sechead"><h2>Capai had tindakan</h2><span class="muted">${BULAN[mo - 1]} ${y} · ${r.had} kali atau lebih</span></div>
     ${senaraiKira(r.melepasiHad, 'Tiada pelajar mencapai had bulan ini.')}
     <div class="sechead"><h2>Senarai rekod</h2><span class="muted">${r.list.length} rekod${r.list.length > 200 ? ', 200 pertama' : ''}</span></div>
-    <div class="list">${r.list.length ? r.list.slice(0, 200).map((x, i) => `<button class="item" data-semak="${i}">
-      <span class="txt"><span class="nm">${esc(x.nama)}</span><span class="sub"> ${esc(fmtD(x.tarikh))} · ${esc(x.kelas)} · ${esc(x.status || 'menunggu semakan')}</span></span>
-      <span class="tag bad">${esc(x.masa)}</span></button>`).join('') : '<div class="kosong">Tiada rekod dalam tempoh ni.</div>'}</div>
+    <div class="list" id="senaraiLaporan">${bolehPilih ? `<label class="pilihsemua"><span class="pilih"><input type="checkbox" id="pilihSemua"></span>
+      Pilih semua menunggu semakan (${bolehPilih})</label>` : ''}
+      ${papar.length ? papar.map((x, i) => `<div class="item">
+      ${menunggu(x) ? `<label class="pilih"><input type="checkbox" data-pilih="${esc(x.id)}" aria-label="Pilih ${esc(x.nama)}"></label>` : '<span class="pilih kosong-pilih"></span>'}
+      <button class="txt" data-semak="${i}"><span class="nm">${esc(x.nama)}</span><span class="sub"> ${esc(fmtD(x.tarikh))} · ${esc(x.kelas)} · ${esc(x.status || 'menunggu semakan')}</span></button>
+      <span class="tag bad">${esc(x.masa)}</span></div>`).join('') : '<div class="kosong">Tiada rekod dalam tempoh ni.</div>'}</div>
     <button class="btn sec" id="btnCsv" ${r.list.length ? '' : 'disabled'}>Eksport CSV</button>`;
+  kemaskiniPilihan();
+}
+
+// ---------- Semakan pukal ----------
+// S.pilih simpan ID rekod; hanya rekod menunggu semakan boleh dipilih
+function kemaskiniPilihan() {
+  const kotak = [...document.querySelectorAll('#senaraiLaporan [data-pilih]')];
+  // Buang pilihan yang tiada lagi dalam senarai (contoh: baru disemak satu per satu)
+  const ada = new Set(kotak.map(k => k.dataset.pilih));
+  S.pilih.forEach(id => { if (!ada.has(id)) S.pilih.delete(id); });
+  kotak.forEach(k => { k.checked = S.pilih.has(k.dataset.pilih); k.closest('.item').classList.toggle('dipilih', k.checked); });
+  const semua = $('pilihSemua'), n = S.pilih.size;
+  if (semua) { semua.checked = n > 0 && n === kotak.length; semua.indeterminate = n > 0 && n < kotak.length; }
+  $('barPukalTeks').textContent = `${n} rekod dipilih`;
+  $('barPukal').hidden = !n;
+  document.body.classList.toggle('ada-bar', n > 0);
+}
+
+$('hasilLaporan').addEventListener('change', e => {
+  if (e.target.id === 'pilihSemua') {
+    S.pilih = new Set(e.target.checked ? [...document.querySelectorAll('#senaraiLaporan [data-pilih]')].map(k => k.dataset.pilih) : []);
+  } else if (e.target.dataset.pilih) {
+    e.target.checked ? S.pilih.add(e.target.dataset.pilih) : S.pilih.delete(e.target.dataset.pilih);
+  } else return;
+  kemaskiniPilihan();
+});
+
+$('btnBatalPilih').addEventListener('click', () => { S.pilih.clear(); kemaskiniPilihan(); });
+
+$('btnSemakPukal').addEventListener('click', () => {
+  const n = S.pilih.size;
+  if (!n) return;
+  bukaSheet(`<h3>Tandakan ${n} rekod</h3>
+    <p class="muted">Hanya rekod yang masih menunggu semakan akan dikemas kini.</p>
+    <label class="f" for="shStatusPukal">Tandakan sebagai</label>
+    <select id="shStatusPukal"><option value="sah">Sah</option><option value="dinaikkan">Dinaikkan</option></select>
+    <label class="f" for="shCatatanPukal">Catatan disiplin (pilihan, untuk semua rekod dipilih)</label>
+    <textarea id="shCatatanPukal" maxlength="200"></textarea>
+    <button class="btn" id="shSemakPukal">Simpan untuk ${n} rekod</button>
+    <button class="btn sec" data-tutup>Tutup</button>
+    <div id="shMsg"></div>`);
+});
+
+async function uiSemakPukal() {
+  const btn = $('shSemakPukal');
+  const status = $('shStatusPukal').value, catatan = $('shCatatanPukal').value.trim();
+  btn.disabled = true;
+  try {
+    const res = await call('semakRekodPukal', [...S.pilih], status, catatan);
+    const ok = new Set(res.ids);
+    S.laporan.list.forEach(x => { if (ok.has(x.id)) { x.status = status; if (catatan) x.catatanDisiplin = catatan; } });
+    S.pilih.clear();
+    renderLaporan();
+    tutupSheet();
+    toast(`${res.ids.length} rekod ditanda ${status}.` + (res.dilangkau ? ` ${res.dilangkau} dilangkau (sudah disemak atau dibatalkan). Jana semula laporan untuk status terkini.` : ''));
+    muatHariIni();
+  } catch (err) { if (!sesiTamat(err)) { btn.disabled = false; msg($('shMsg'), 'bad', esc(err.message)); } }
 }
 
 $('hasilLaporan').addEventListener('click', e => {
