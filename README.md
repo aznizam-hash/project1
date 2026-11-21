@@ -140,7 +140,8 @@ ID dan sejarah rekod setiap pelajar kekal walaupun kelas bertukar. Tab `Murid` d
 
 - Pilih tarikh mula, tarikh akhir dan kelas.
 - Ringkasan: jumlah kes kelewatan dan bilangan pelajar terlibat.
-- **Paling kerap lewat** dalam tempoh dipilih.
+- **Ikut sebab**: bilangan dan peratus kes bagi setiap sebab lewat, termasuk "Tiada sebab".
+- **Paling kerap lewat** dalam tempoh dipilih, dengan sebab yang paling kerap bagi setiap pelajar (contoh "sebab paling kerap: Bangun lewat (3/5)"). Hanya dipapar jika sebab itu muncul 2 kali atau lebih dan lebih kerap dari sebab lain.
 - **Capai had tindakan**: pelajar yang lewat `had_tindakan_sebulan` kali atau lebih dalam bulan semasa.
 - **Eksport CSV** untuk senarai penuh dalam tempoh dipilih.
 
