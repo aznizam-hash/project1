@@ -616,14 +616,32 @@ function getLaporan(token, p) {
   const list = lewat.filter(function (r) { return r.tarikh >= p.dari && r.tarikh <= p.hingga; })
     .sort(function (a, b) { return (a.tarikh + a.masa).localeCompare(b.tarikh + b.masa); });
 
+  // Kira kes ikut sebab. Sebab kosong dikira sebagai '' (dipapar "Tiada sebab").
+  function kiraSebab(rows) {
+    const k = {};
+    rows.forEach(function (r) { const s = String(r.sebab || '').trim(); k[s] = (k[s] || 0) + 1; });
+    return Object.keys(k).map(function (s) { return { sebab: s, n: k[s] }; })
+      .sort(function (a, b) { return b.n - a.n || a.sebab.localeCompare(b.sebab); });
+  }
+
   function ikutMurid(rows) {
     const m = {};
     rows.forEach(function (r) {
-      const o = m[r.idMurid] || (m[r.idMurid] = { id: r.idMurid, nama: nama[r.idMurid] || r.idMurid, kelas: r.kelas, n: 0 });
+      const o = m[r.idMurid] || (m[r.idMurid] = { id: r.idMurid, nama: nama[r.idMurid] || r.idMurid, kelas: r.kelas, n: 0, _rows: [] });
       o.n++;
+      o._rows.push(r);
     });
-    return Object.keys(m).map(function (k) { return m[k]; })
-      .sort(function (a, b) { return b.n - a.n || a.nama.localeCompare(b.nama); });
+    return Object.keys(m).map(function (k) {
+      const o = m[k];
+      // Sebab paling kerap bagi murid ini (abaikan rekod tanpa sebab). Hanya dipapar jika
+      // muncul 2 kali atau lebih dan tiada sebab lain yang sama kerap.
+      const ada = kiraSebab(o._rows).filter(function (x) { return x.sebab; });
+      const utama = ada[0] && ada[0].n >= 2 && (!ada[1] || ada[1].n < ada[0].n) ? ada[0] : null;
+      delete o._rows;
+      o.sebabUtama = utama ? utama.sebab : '';
+      o.nSebabUtama = utama ? utama.n : 0;
+      return o;
+    }).sort(function (a, b) { return b.n - a.n || a.nama.localeCompare(b.nama); });
   }
   const kerap = ikutMurid(list);
   const bulanIni = ikutMurid(lewat.filter(function (r) { return r.tarikh.slice(0, 7) === bulan; }))
@@ -635,6 +653,7 @@ function getLaporan(token, p) {
     pelajar: kerap.length,
     kerap: kerap.slice(0, 20),
     melepasiHad: bulanIni,
+    ikutSebab: kiraSebab(list),
     list: list.map(function (r) {
       return { id: r.id, tarikh: r.tarikh, masa: r.masa.slice(0, 5), idMurid: r.idMurid, nama: nama[r.idMurid] || r.idMurid,
         kelas: r.kelas, sebab: r.sebab, status: r.status, catatanDisiplin: r.catatanDisiplin, oleh: r.oleh,

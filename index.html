@@ -88,6 +88,8 @@
   .pilih.kosong-pilih { cursor:default; }
   .item.dipilih { background:var(--pri-soft); }
   .sub b.naik { color:var(--bad); }
+  .item.sebab .bar { display:block; height:6px; border-radius:99px; background:var(--line); margin-top:6px; overflow:hidden; }
+  .item.sebab .bar span { display:block; height:100%; background:var(--pri); border-radius:99px; }
   .tukarmasa { display:block; min-height:44px; margin:-8px 0 6px; }
   .pilihsemua { display:flex; align-items:center; gap:4px; padding:4px 16px 4px 16px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600; }
   .barpukal { position:fixed; left:0; right:0; bottom:calc(64px + env(safe-area-inset-bottom)); z-index:14; padding:0 16px 10px; }
@@ -1141,8 +1143,20 @@ $('btnJana').addEventListener('click', async () => {
 
 function senaraiKira(list, kosong) {
   return `<div class="list">${list.length ? list.map(m => `<div class="item"><span class="txt"><span class="nm">${esc(m.nama)}</span>
-    <span class="sub"> ${esc(m.kelas)}</span></span><span class="tag bad">${m.n} kali</span></div>`).join('')
+    <span class="sub"> ${esc(m.kelas)}${m.sebabUtama ? ` · sebab paling kerap: ${esc(m.sebabUtama)} (${m.nSebabUtama}/${m.n})` : ''}</span></span><span class="tag bad">${m.n} kali</span></div>`).join('')
     : `<div class="kosong">${kosong}</div>`}</div>`;
+}
+
+// Bar mendatar menunjukkan bahagian setiap sebab daripada jumlah kes
+function senaraiSebab(list, jumlah) {
+  if (!list.length) return '<div class="list"><div class="kosong">Tiada kes kelewatan dalam tempoh ini.</div></div>';
+  // "Tiada sebab" diletak paling bawah supaya sebab sebenar dibaca dulu
+  list = list.filter(x => x.sebab).concat(list.filter(x => !x.sebab));
+  return `<div class="list">${list.map(x => {
+    const pct = Math.round(x.n / jumlah * 100);
+    return `<div class="item sebab"><span class="txt"><span class="nm">${x.sebab ? esc(x.sebab) : '<span class="muted">Tiada sebab</span>'}</span>
+      <span class="bar"><span style="width:${pct}%"></span></span></span><span class="tag">${x.n} · ${pct}%</span></div>`;
+  }).join('')}</div>`;
 }
 
 const bolehNaik = x => x.status !== 'dinaikkan';
@@ -1157,6 +1171,8 @@ function renderLaporan() {
       <div class="card"><b>${r.jumlah}</b><span class="muted">Kes kelewatan</span></div>
       <div class="card"><b>${r.pelajar}</b><span class="muted">Pelajar terlibat</span></div>
     </div>
+    <div class="sechead"><h2>Ikut sebab</h2><span class="muted">${fmtD(r.dari)} – ${fmtD(r.hingga)}</span></div>
+    ${senaraiSebab(r.ikutSebab, r.jumlah)}
     <div class="sechead"><h2>Paling kerap lewat</h2><span class="muted">${fmtD(r.dari)} – ${fmtD(r.hingga)}</span></div>
     ${senaraiKira(r.kerap, 'Tiada kes kelewatan dalam tempoh ini.')}
     <div class="sechead"><h2>Capai had tindakan</h2><span class="muted">${BULAN[mo - 1]} ${y} · ${r.had} kali atau lebih</span></div>
