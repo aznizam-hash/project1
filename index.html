@@ -88,6 +88,7 @@
   .pilih.kosong-pilih { cursor:default; }
   .item.dipilih { background:var(--pri-soft); }
   .sub b.naik { color:var(--bad); }
+  .tukarmasa { display:block; min-height:44px; margin:-8px 0 6px; }
   .pilihsemua { display:flex; align-items:center; gap:4px; padding:4px 16px 4px 16px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600; }
   .barpukal { position:fixed; left:0; right:0; bottom:calc(64px + env(safe-area-inset-bottom)); z-index:14; padding:0 16px 10px; }
   .barpukal > div { max-width:560px; margin:0 auto; display:flex; align-items:center; gap:10px; background:var(--ink); color:#fff;
@@ -624,9 +625,15 @@ function bukaSheetRekod(m) {
       <button class="btn sec" data-tutup>Tutup</button>`);
     return;
   }
-  S.sheetRekod = { m, sebab: '' };
+  S.sheetRekod = { m, sebab: '', masaTiba: '' };
   bukaSheet(`<h3>${esc(m.nama)}</h3><div class="muted">${esc(m.kelas)} · ${esc(m.id)}</div>
     <div class="waktu" id="shWaktu"><span id="shLabel">Waktu tiba</span><b id="shMasa">--:--</b></div>
+    <button class="link tukarmasa" id="shTukarMasa">Pelajar sampai lebih awal? Tukar masa tiba</button>
+    <div id="shMasaBox" hidden>
+      <label class="f" for="shMasaTiba">Masa tiba sebenar</label>
+      <input id="shMasaTiba" type="time">
+      <p class="muted">Masa anda rekod tetap disimpan oleh sistem untuk semakan guru disiplin.</p>
+    </div>
     <div class="muted">Sebab lewat, jika ada</div>
     <div class="chips" id="shChips">${S.init.sebab.map(s => `<button class="chip" data-sebab="${esc(s)}">${esc(s)}</button>`).join('')}</div>
     <button class="btn" id="shRekod">Rekod</button>
@@ -635,14 +642,26 @@ function bukaSheetRekod(m) {
   kemaskiniWaktuSheet(jamKL());
 }
 
+// Dipanggil setiap saat oleh jam. Jika masa tiba diisi manual, papar masa itu dan bukan jam semasa.
 function kemaskiniWaktuSheet(j) {
+  const mt = S.sheetRekod && S.sheetRekod.masaTiba;
+  if (mt) { const [h, mn] = mt.split(':').map(Number); j = { hm: mt, minit: h * 60 + mn }; }
   const lewat = lewatSekarang(j);
+  const label = mt ? 'Masa tiba (diisi)' : 'Waktu tiba';
   $('shWaktu').className = 'waktu' + (lewat ? '' : ' ok');
-  $('shLabel').textContent = lewat ? 'Waktu tiba' : `Waktu tiba · belum lewat (had ${S.init.config.waktuLewat})`;
+  $('shLabel').textContent = lewat ? label : `${label} · belum lewat (had ${S.init.config.waktuLewat})`;
   $('shMasa').textContent = j.hm;
   const btn = $('shRekod');
   if (!btn.disabled) btn.textContent = `Rekod jam ${j.hm}`;
 }
+
+$('sheet').addEventListener('input', e => {
+  if (e.target.id !== 'shMasaTiba' || !S.sheetRekod) return;
+  // Masa sama dengan jam sekarang = tidak diubah; biar server cap masa sendiri
+  const v = e.target.value, j = jamKL();
+  S.sheetRekod.masaTiba = /^\d{2}:\d{2}$/.test(v) && v !== j.hm ? v : '';
+  kemaskiniWaktuSheet(j);
+});
 
 $('sheet').addEventListener('click', async e => {
   if (e.target.closest('[data-tutup]')) return tutupSheet();
@@ -655,6 +674,15 @@ $('sheet').addEventListener('click', async e => {
     return;
   }
   if (e.target.id === 'shRekod') return uiSimpanRekod();
+  if (e.target.id === 'shTukarMasa') {
+    const j = jamKL();
+    e.target.hidden = true;
+    $('shMasaBox').hidden = false;
+    $('shMasaTiba').max = j.hm;
+    $('shMasaTiba').value = j.hm;
+    $('shMasaTiba').focus();
+    return;
+  }
   if (e.target.id === 'shBatalRekod') return uiBatalRekod();
   if (e.target.id === 'shSimpanSemak' || e.target.id === 'shTarikBalik') return uiSimpanSemak(e.target);
   if (e.target.id === 'shSemakPukal') return uiSemakPukal();
@@ -667,14 +695,14 @@ async function uiSimpanRekod() {
   const { m, sebab } = S.sheetRekod, btn = $('shRekod');
   btn.disabled = true; btn.textContent = 'Menyimpan...';
   try {
-    const r = await call('simpanRekod', m.id, sebab);
+    const r = await call('simpanRekod', m.id, sebab, S.sheetRekod.masaTiba);
     S.hariIni[m.id] = { masa: r.masa, lewat: r.lewat };
     tutupSheet();
     $('cari').value = '';
     renderMurid();
     toast(r.lewat
-      ? `${r.nama} direkod ${r.masa} · lewat kali ke-${r.kaliBulanIni} bulan ini` + (r.kaliBulanIni >= r.hadTindakan ? ' (capai had tindakan)' : '')
-      : `${r.nama} direkod ${r.masa} · tidak lewat`);
+      ? `${r.nama} tiba ${r.masa} · lewat kali ke-${r.kaliBulanIni} bulan ini` + (r.kaliBulanIni >= r.hadTindakan ? ' (capai had tindakan)' : '')
+      : `${r.nama} tiba ${r.masa} · tidak lewat`);
   } catch (err) {
     if (sesiTamat(err)) return;
     btn.disabled = false;
@@ -693,7 +721,7 @@ async function muatHariIni() {
     const n = S.rekodHariIni.length;
     $('bilHariIni').textContent = `${n} rekod`;
     box.innerHTML = n ? S.rekodHariIni.map(r => `<button class="item" data-rekod="${esc(r.id)}">
-      <span class="txt"><span class="nm">${esc(r.nama)}</span><span class="sub"> ${esc(r.kelas)}${r.sebab ? ' · ' + esc(r.sebab) : ''}${r.lewat ? (r.status ? ' · ' + esc(r.status) : '') : ' · tidak lewat'}</span></span>
+      <span class="txt"><span class="nm">${esc(r.nama)}</span><span class="sub"> ${esc(r.kelas)}${r.sebab ? ' · ' + esc(r.sebab) : ''}${r.lewat ? (r.status ? ' · ' + esc(r.status) : '') : ' · tidak lewat'}${r.masaRekod ? ' · direkod ' + esc(r.masaRekod) : ''}</span></span>
       ${tagMasa(r.masa, r.lewat)}</button>`).join('')
       : '<div class="kosong">Tiada rekod lagi hari ini.</div>';
   } catch (e) { if (!sesiTamat(e)) box.innerHTML = `<div class="kosong">${esc(e.message)}</div>`; }
@@ -1138,7 +1166,7 @@ function renderLaporan() {
       Pilih semua (${bolehPilih})</label>` : ''}
       ${papar.length ? papar.map((x, i) => `<div class="item">
       ${bolehNaik(x) ? `<label class="pilih"><input type="checkbox" data-pilih="${esc(x.id)}" aria-label="Pilih ${esc(x.nama)}"></label>` : '<span class="pilih kosong-pilih"></span>'}
-      <button class="txt" data-semak="${i}"><span class="nm">${esc(x.nama)}</span><span class="sub"> ${esc(fmtD(x.tarikh))} · ${esc(x.kelas)}${x.status ? ' · <b class="naik">dinaikkan</b>' : ''}</span></button>
+      <button class="txt" data-semak="${i}"><span class="nm">${esc(x.nama)}</span><span class="sub"> ${esc(fmtD(x.tarikh))} · ${esc(x.kelas)}${x.status ? ' · <b class="naik">dinaikkan</b>' : ''}${x.masaRekod ? ' · direkod ' + esc(x.masaRekod) : ''}</span></button>
       <span class="tag bad">${esc(x.masa)}</span></div>`).join('') : '<div class="kosong">Tiada rekod dalam tempoh ni.</div>'}</div>
     <button class="btn sec" id="btnCsv" ${r.list.length ? '' : 'disabled'}>Eksport CSV</button>`;
   kemaskiniPilihan();
@@ -1212,7 +1240,7 @@ function bukaSheetRekod2(r) {
   const naik = r.status === 'dinaikkan';
   S.sheetSemak = r; S.sheetBatal = r;
   bukaSheet(`<h3>${esc(r.nama)}</h3>
-    <div class="muted">${esc(r.kelas)} · ${esc(r.idMurid)} · ${esc(fmtD(r.tarikh || ''))} · masa ${esc(r.masa)}</div>
+    <div class="muted">${esc(r.kelas)} · ${esc(r.idMurid)} · ${esc(fmtD(r.tarikh || ''))} · tiba ${esc(r.masa)}${r.masaRekod ? ` (direkod ${esc(r.masaRekod)})` : ''}</div>
     <div class="muted" style="margin-top:6px">Sebab: ${esc(r.sebab || 'tiada')} · direkod oleh ${esc(r.oleh || '')}</div>
     <div style="margin:12px 0"><span class="tag ${naik ? 'bad' : ''}">${naik ? 'dinaikkan' : 'kes biasa'}</span></div>
     ${r.catatanDisiplin ? `<div class="muted" style="margin-bottom:12px">Catatan disiplin: ${esc(r.catatanDisiplin)}</div>` : ''}
@@ -1250,8 +1278,8 @@ async function uiSimpanSemak(btn) {
 $('hasilLaporan').addEventListener('click', e => {
   if (e.target.id !== 'btnCsv') return;
   const r = S.laporan;
-  const rows = [['Tarikh', 'Masa', 'ID Murid', 'Nama', 'Kelas', 'Sebab', 'Tindakan', 'Direkod Oleh']]
-    .concat(r.list.map(x => [fmtD(x.tarikh), x.masa, x.idMurid, x.nama, x.kelas, x.sebab, x.status, x.oleh]));
+  const rows = [['Tarikh', 'Masa Tiba', 'ID Murid', 'Nama', 'Kelas', 'Sebab', 'Tindakan', 'Direkod Oleh', 'Masa Rekod (jika berbeza)']]
+    .concat(r.list.map(x => [fmtD(x.tarikh), x.masa, x.idMurid, x.nama, x.kelas, x.sebab, x.status, x.oleh, x.masaRekod]));
   // Elak formula injection bila fail dibuka dalam Excel
   const teks = rows.map(row => row.map(v => {
     let s = String(v == null ? '' : v);

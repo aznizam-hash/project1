@@ -17,7 +17,8 @@ const CONFIG = {
   MAKS_HARI_LAPORAN: 366,
   SIMPAN_TAHUN: 2,           // rekod dan backup dipadam selepas tempoh ini (keputusan sekolah)
   MAKS_IMPORT: 3000,
-  MAKS_NAIK_PUKAL: 200,     // sama dengan had paparan Senarai rekod dalam Laporan
+  MAKS_NAIK_PUKAL: 200,
+  MASA_TIBA_AWAL: '06:00',   // masa tiba yang diisi manual tidak boleh lebih awal dari ini     // sama dengan had paparan Senarai rekod dalam Laporan
   SESI_MINIT: { PENGAWAS: 3, GURU: 30, ADMIN: 15 }, // tamat jika tiada aktiviti (keputusan sekolah: admin 15 minit)
   HAD_CUBAAN: 5,             // PIN salah berturut-turut sebelum akaun dikunci
   KUNCI_MINIT: 15,
@@ -28,7 +29,7 @@ const TAB = { MURID: 'Murid', REKOD: 'Rekod', PENGGUNA: 'Pengguna', TETAPAN: 'Te
 const HEADERS = {
   Murid: ['ID_Murid', 'Nama', 'Tingkatan', 'Kelas', 'Status', 'Tarikh_Tidak_Aktif'],
   Rekod: ['ID_Rekod', 'Tarikh', 'Masa_Tiba', 'ID_Murid', 'Kelas', 'ID_Pengguna', 'Sebab', 'Lewat', 'Status',
-    'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal'],
+    'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal', 'Masa_Rekod'],
   Pengguna: ['ID_Pengguna', 'Nama', 'Peranan', 'Hash_PIN', 'Salt', 'Perlu_Tukar_PIN', 'Dikunci_Hingga', 'Status', 'Cubaan_Gagal'],
   Tetapan: ['Kunci', 'Nilai', 'Keterangan'],
   LogAudit: ['Masa', 'ID_Pengguna', 'Tindakan', 'Butiran']
@@ -88,6 +89,7 @@ function setupSheets() {
     ss.getSheetByName(TAB.MURID).getRange(1, 6).setValue('Tarikh_Tidak_Aktif').setFontWeight('bold');
   }
   ss.getSheetByName(TAB.REKOD).getRange('A:I').setNumberFormat('@');
+  pastikanLajurMasaRekod_(ss.getSheetByName(TAB.REKOD));
   ss.getSheetByName(TAB.PENGGUNA).getRange('A:F').setNumberFormat('@');
   ss.getSheetByName(TAB.TETAPAN).getRange('A:B').setNumberFormat('@');
   ss.setSpreadsheetTimeZone(CONFIG.ZON_WAKTU);
@@ -426,10 +428,13 @@ function getMuridAktif(token) {
   return { murid: murid, hariIni: hariIni };
 }
 
-function simpanRekod(token, idMurid, sebab) {
+// masaTiba (HH:MM) pilihan: untuk murid yang direkod selepas dia sampai. Kosong = masa server sekarang.
+function simpanRekod(token, idMurid, sebab, masaTiba) {
   const user = requireUser_(token);
   idMurid = String(idMurid || '').trim();
   sebab = String(sebab || '').trim();
+  masaTiba = String(masaTiba || '').trim();
+  if (masaTiba && !/^([01]\d|2[0-3]):[0-5]\d$/.test(masaTiba)) throw new Error('Masa tiba tidak sah. Guna format JJ:MM.');
   if (sebab && senaraiSebab_().indexOf(sebab) === -1) throw new Error('Sebab tidak sah.');
   const m = readMurid_().find(function (x) { return x.id === idMurid && x.aktif; });
   if (!m) throw new Error('Murid tidak dijumpai atau tidak aktif.');
@@ -437,30 +442,39 @@ function simpanRekod(token, idMurid, sebab) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
-    const t = sekarang_();  // masa tiba dicap oleh server, bukan dari pelayar
+    const t = sekarang_();  // Masa_Rekod sentiasa dicap oleh server, bukan dari pelayar
+    let masa = t.masa, minit = t.minit;
+    if (masaTiba) {
+      minit = minitDari_(masaTiba, 'masa tiba');
+      if (minit > t.minit) throw new Error('Masa tiba tidak boleh selepas masa sekarang (' + t.masa.slice(0, 5) + ').');
+      if (minit < minitDari_(CONFIG.MASA_TIBA_AWAL, 'MASA_TIBA_AWAL')) throw new Error('Masa tiba tidak boleh sebelum ' + CONFIG.MASA_TIBA_AWAL + '.');
+      masa = masaTiba + ':00';
+    }
     const rekod = readRekod_();
     const sudah = rekod.find(function (r) { return r.tarikh === t.tarikh && r.idMurid === idMurid && !r.batal; });
     if (sudah) throw new Error(m.nama + ' sudah direkod hari ini pada ' + sudah.masa.slice(0, 5) + '.');
 
-    const lewat = minitLewat_(t.minit) > 0;
+    const lewat = minitLewat_(minit) > 0;
     const id = 'R' + fmt_(t.d, 'yyyyMMddHHmmss') + Utilities.getUuid().slice(0, 4).toUpperCase();
     const row = {
-      ID_Rekod: id, Tarikh: t.tarikh, Masa_Tiba: t.masa, ID_Murid: idMurid, Kelas: clean_(m.label, 40),
+      ID_Rekod: id, Tarikh: t.tarikh, Masa_Tiba: masa, Masa_Rekod: t.masa, ID_Murid: idMurid, Kelas: clean_(m.label, 40),
       ID_Pengguna: user.id, Sebab: sebab, Lewat: lewat ? 'ya' : 'tidak',
       Status: '', Dibatalkan: 'tidak'
     };
     // Tulis sebagai teks supaya Sheets tidak menukar Tarikh dan Masa_Tiba kepada format tarikh/masa
     const sh = sheet_(TAB.REKOD);
+    pastikanLajurMasaRekod_(sh);
     const julat = sh.getRange(sh.getLastRow() + 1, 1, 1, HEADERS.Rekod.length);
     julat.setNumberFormat('@');
     julat.setValues([HEADERS.Rekod.map(function (h) { return row[h] === undefined ? '' : row[h]; })]);
-    log_(user.id, 'REKOD_DIBUAT', id + ' ' + idMurid + (lewat ? ' (lewat)' : ' (tidak lewat)'));
+    log_(user.id, 'REKOD_DIBUAT', id + ' ' + idMurid + (lewat ? ' (lewat)' : ' (tidak lewat)') +
+      (masaTiba ? ' masa tiba diisi ' + masaTiba + ', direkod ' + t.masa.slice(0, 5) : ''));
 
     const bulan = t.tarikh.slice(0, 7);
     const kali = lewat ? rekod.filter(function (r) {
       return r.idMurid === idMurid && r.lewat && !r.batal && r.tarikh.slice(0, 7) === bulan;
     }).length + 1 : 0;
-    return { nama: m.nama, masa: t.masa.slice(0, 5), lewat: lewat, kaliBulanIni: kali, hadTindakan: hadTindakan_() };
+    return { nama: m.nama, masa: masa.slice(0, 5), lewat: lewat, kaliBulanIni: kali, hadTindakan: hadTindakan_() };
   } finally {
     lock.releaseLock();
   }
@@ -477,7 +491,7 @@ function getRekodHariIni(token) {
     return {
       id: r.id, masa: r.masa.slice(0, 5), nama: nama[r.idMurid] || r.idMurid, idMurid: r.idMurid,
       kelas: r.kelas, sebab: r.sebab, lewat: r.lewat, status: r.status, oleh: r.oleh,
-      catatanDisiplin: r.catatanDisiplin, tarikh: r.tarikh,
+      catatanDisiplin: r.catatanDisiplin, tarikh: r.tarikh, masaRekod: masaRekodBerbeza_(r),
       bolehBatal: sendiri || user.peranan === 'ADMIN',
       perluCatatan: !sendiri && user.peranan === 'ADMIN',
       bolehSemak: user.peranan !== 'PENGAWAS' && r.lewat
@@ -623,7 +637,8 @@ function getLaporan(token, p) {
     melepasiHad: bulanIni,
     list: list.map(function (r) {
       return { id: r.id, tarikh: r.tarikh, masa: r.masa.slice(0, 5), idMurid: r.idMurid, nama: nama[r.idMurid] || r.idMurid,
-        kelas: r.kelas, sebab: r.sebab, status: r.status, catatanDisiplin: r.catatanDisiplin, oleh: r.oleh };
+        kelas: r.kelas, sebab: r.sebab, status: r.status, catatanDisiplin: r.catatanDisiplin, oleh: r.oleh,
+        masaRekod: masaRekodBerbeza_(r) };
     })
   };
 }
@@ -1110,9 +1125,23 @@ function readRekod_() {
       status: String(r.Status).trim() === 'dinaikkan' ? 'dinaikkan' : '',
       catatanDisiplin: String(r.Catatan_Disiplin || ''),
       batal: String(r.Dibatalkan).trim().toLowerCase() === 'ya',
+      masaRekod: r.Masa_Rekod instanceof Date ? fmt_(r.Masa_Rekod, 'HH:mm:ss') : String(r.Masa_Rekod || ''),
       _row: r._row
     };
   });
+}
+
+// Masa rekod (HH:MM) hanya jika berbeza dari masa tiba, iaitu masa tiba diisi manual. Rekod lama tiada Masa_Rekod.
+function masaRekodBerbeza_(r) {
+  const m = r.masaRekod.slice(0, 5);
+  return m && m !== r.masa.slice(0, 5) ? m : '';
+}
+
+// Tab Rekod lama tiada lajur Masa_Rekod di hujung. Tambah header sahaja, data lama tidak diubah.
+function pastikanLajurMasaRekod_(sh) {
+  const col = HEADERS.Rekod.length;
+  const h = sh.getRange(1, col, 1, 1).getValues()[0][0];
+  if (String(h).trim() !== 'Masa_Rekod') sh.getRange(1, col, 1, 1).setValues([['Masa_Rekod']]);
 }
 
 function petaNamaMurid_() {

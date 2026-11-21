@@ -43,7 +43,7 @@
     });
     const sebab = ['Masalah kenderaan', 'Bangun lewat', 'Hujan lebat', 'Urusan keluarga', 'Lain-lain'];
     const rekod = [['ID_Rekod', 'Tarikh', 'Masa_Tiba', 'ID_Murid', 'Kelas', 'ID_Pengguna', 'Sebab', 'Lewat', 'Status',
-      'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal']];
+      'Catatan_Disiplin', 'ID_Disiplin', 'Tarikh_Semakan', 'Dibatalkan', 'ID_Pembatal', 'Tarikh_Batal', 'Catatan_Batal', 'Masa_Rekod']];
     // Rekod rekaan untuk 45 hari lepas (hari bekerja sahaja)
     let r = 7;
     const rand = m => { r = (r * 9301 + 49297) % 233280; return Math.floor(r / 233280 * m); };
@@ -59,7 +59,7 @@
         const minit = 21 + rand(39);
         const masa = '07:' + String(minit).padStart(2, '0') + ':' + String(rand(60)).padStart(2, '0');
         rekod.push(['RDEMO' + d + '-' + j, fmt(t, 'yyyy-MM-dd'), masa, m[0], m[2] + ' ' + m[3], 'PGW001',
-          rand(3) ? sebab[rand(sebab.length)] : '', 'ya', '', '', '', '', 'tidak', '', '', '']);
+          rand(3) ? sebab[rand(sebab.length)] : '', 'ya', '', '', '', '', 'tidak', '', '', '', '']);
       }
     }
     return {
